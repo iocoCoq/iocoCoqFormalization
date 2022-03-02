@@ -1428,3 +1428,26 @@ Proof.
   clear H0 H1 H2. unfold createBehaviourTransSet. rewrite <- get_B.
   apply BehaviourTransSetR'_createBehaviourTransSet'. apply H'.
 Qed.
+
+Fixpoint generate_dot' (lts : BehaviourTransSet) : string :=
+  match lts with
+  | nil => ""
+  | (P, e, Q) :: tl =>
+    " <" ++ process_behaviour_to_str P ++ "> -> <" ++ process_behaviour_to_str Q ++ ">" ++
+    " [label=<" ++ event_to_str e ++ ">];" ++ (generate_dot' tl)
+  end.
+
+Definition style_initial_state (P : ProcessName) (ctx : BehaviourExpressions) : string :=
+  match getProcessBehaviour P ctx with
+  | Some B =>
+    "<" ++ process_behaviour_to_str B ++ "> [style=bold, color=red];"
+  | _ => ""
+  end.
+
+Definition generate_dot (start_process : ProcessName) (ctx : BehaviourExpressions) (i : nat): string :=
+match createBehaviourTransSet ctx start_process i with
+| Some lts =>
+  "digraph " ++ start_process ++ "_LTS { " ++ (style_initial_state start_process ctx)++
+  (generate_dot' lts) ++ " }"
+| _ => ""
+end.

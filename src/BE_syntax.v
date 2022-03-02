@@ -86,6 +86,33 @@ Notation "x ::= y" :=
 
 End BehaviourExpressionsNotations.
 
+Definition event_to_str (e : Event) : string :=
+  match e with
+  | InternalEvent => "τ"
+  | ExternalEvent n => n
+  end.
+
+Local Open Scope string_scope.
+Fixpoint process_behaviour_to_str (B : ProcessBehaviour) : string :=
+  match B with
+  | Prefix e B' => "(" ++ event_to_str e ++ ";" ++ process_behaviour_to_str B' ++ ")"
+  | Choice (Values Bs) =>
+    let fix expand_choice (l : list ProcessBehaviour) : string :=
+       match l with
+       | nil => "STOP"
+       | B' :: nil => process_behaviour_to_str B'
+       | B' :: tl => process_behaviour_to_str B' ++ " [] " ++ expand_choice tl
+       end
+    in "( " ++ expand_choice Bs ++ ")"
+  | Parallel B1 g B2 =>
+    "(" ++ process_behaviour_to_str B1 ++ " |[" ++ (concat ", " g) ++ "]| " ++
+    process_behaviour_to_str B2 ++ ")"
+  | Hide B' g =>
+    "(HIDE { " ++ (concat ", " g) ++ " } IN " ++ process_behaviour_to_str B' ++ ")"
+  | ProcessInstantiation p => p
+  end.
+Local Close Scope string_scope.
+
 Section BehaviourExpressionsDefinition.
 (* ============================ Helper functions ============================ *)
 Fixpoint allProcessNames (definitions : list ProcessDefinition) :=

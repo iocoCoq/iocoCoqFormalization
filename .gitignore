@@ -3,5 +3,8 @@
 *.glob
 *.vo
 *.d
+*.vok
+*.vos
 Makefile
 Makefile.conf
+DOT_examples
