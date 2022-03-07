@@ -47,7 +47,7 @@ Section SectionLTS.
   Record LTS : Type := mkLTS {
       Q   : set state
     ; L   : set label
-    ; T   : list transition
+    ; T   : set transition
     ; q0  : state
 
     ; Q_non_empty       : Q <> []
@@ -115,16 +115,29 @@ Ltac loop_tactics ltac Hyp :=
             clear Hyp; rename Hyp' into Hyp);
     inversion Hyp.
 
-(*Definition fig2_r : LTS.
+Local Open Scope string.
+
+Ltac solve_in :=
+  repeat ((left ; reflexivity) + right).
+
+Ltac solve_LTS_rules Q L T q0 := apply (mkLTS Q L T q0) ;
+  repeat (
+    match goal with
+    | |- In _ _ => solve_in
+    end
+  ) ; fail "One or more contextual rules were not fulfilled". 
+
+(*
+Definition fig2_r : LTS.
 Proof.
   apply (mkLTS
           [0;1;2;3;4;5]
           ["but";"liq";"choc"]
-          [(0,"but",1);(1,"liq",3);
-            (0,"but",2);(2,"but",4);(4,"choc",5)]
+          [(0, event "but",1);(1,event "liq",3);
+            (0, event "but",2);(2, event "but",4);(4, event "choc",5)]
           0).
   { t_list_not_empty. }
-  { t_elem_not_in_list. }
+  { repeat ((left ; reflexivity) + right). }
   { t_elem_in_list. }
   { t_trans_list_valid. }
   { t_all_elem_not_in_list. }
@@ -143,11 +156,14 @@ Inductive ind_transition : state -> transition_label -> state -> LTS -> Prop :=
 
 Inductive ind_transition_seq : state -> list transition_label -> state -> LTS -> Prop :=
   | transition_seq_r1 : forall (s s' : state) (ll : list transition_label) (p : LTS),
-                          ((length ll = 1) /\ (ind_transition s (hd tau ll) s' p))
-                              \/
-                          ((length ll > 1) /\ (exists (si : state), ind_transition s (hd tau ll) si p 
-                                                  /\ ind_transition_seq si (tl ll) s' p))
+                          (length ll = 1) /\ (ind_transition s (hd tau ll) s' p)
+                          -> ind_transition_seq s ll s' p
+  | transition_seq_r2 : forall (s s' : state) (ll : list transition_label) (p : LTS),
+                          (length ll > 1) /\
+                          (exists (si : state), ind_transition s (hd tau ll) si p 
+                                                /\ ind_transition_seq si (tl ll) s' p)
                           -> ind_transition_seq s ll s' p.
+
 
 Inductive ind_state_reaches_some_other : state -> list transition_label -> LTS -> Prop :=
   | state_reaches_some_other_r1 : forall (s : state) (ll : list transition_label) (p : LTS),
