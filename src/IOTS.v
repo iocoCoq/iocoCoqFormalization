@@ -24,6 +24,15 @@ Section SectionIOLTS.
     ; no_repetition_L_i             : NoDup L_i
     ; no_repetition_L_u             : NoDup L_u
   }.
+  
+  Definition create_IOLTS (lts : LTS) (Li Lu : list label) : option IOLTS. Admitted.
+  
+  Theorem create_IOLTS_correct :
+    forall (lts : LTS) (L_i L_u : list label),
+      is_disjoint L_i L_u /\ is_valid_LTS (L_i ++ L_u) lts /\ NoDup L_i /\ NoDup L_u
+      -> create_IOLTS lts L_i L_u <> None.
+  Proof. Admitted.
+  
 End SectionIOLTS.
 
 (* Definição 7*)
@@ -49,8 +58,8 @@ Section SectionIOTS.
           every_elem_reaches_some_other ls p.(L_i) p.(lts).
 
   Record IOTS : Type := mkIOTS {
-      iolts                   : IOLTS
-    ; input_actions_activated : valid_iots iolts
+      embedded_iolts                   : IOLTS
+    ; input_actions_activated : valid_iots embedded_iolts
   }.
 End SectionIOTS.
 
@@ -82,21 +91,34 @@ Inductive ind_quiescent_traces : list label -> IOLTS -> Prop :=
 
 (* Definição 9*)
 Section SectionSuspensionIOLTS.
-  Definition delta := "delta".
+
+  Inductive delta_label : Type :=
+  | delta : delta_label.
+
+  (*Definition delta := "delta".*)
 
   Record s_IOLTS : Type := mksIOLTS {
-      s_iolts               : IOLTS
-    ; Ts                    :  list (state * label * state)
-    ; Q_del                 :=  s_iolts.(lts).(Q)
-    ; L_del                 :=  set_union string_dec s_iolts.(lts).(L) [delta]
-    ; Li_del                :=  s_iolts.(L_i)
-    ; Lu_del                :=  set_union string_dec s_iolts.(L_u) [delta]
-    ; T_del                 :=  s_iolts.(lts).(T) ++ Ts
-    ; delta_not_in_L        : ~ In delta s_iolts.(lts).(L)
-    ; valid_del_transitions : forall (s s' : state) (l : label), 
-                                        In (s, l, s') Ts -> s = s' /\ l = delta /\ In s Q_del
-    ; Ts_complete_correct   : forall (s : state), In (s, delta, s) Ts <-> In s Q_del /\ ind_quiescent s s_iolts
+      iolts               : IOLTS
+    ; Ts                  :  list (state * delta_label * state)
+    (*; Q_del                 :=  iolts.(lts).(Q)*)
+    (*; L_del                 :=  set_union string_dec s_iolts.(lts).(L) [delta]*)
+    (*; Li_del                :=  s_iolts.(L_i)*)
+    (*; Lu_del                :=  set_union string_dec s_iolts.(L_u) [delta]*)
+    (*; T_del                 :=  s_iolts.(lts).(T) ++ Ts*)
+    (*; delta_not_in_L        : ~ In delta s_iolts.(lts).(L)*)
+    ; valid_del_transitions : forall (s s' : state) (l : delta_label), 
+                                        In (s, l, s') Ts -> s = s' /\ l = delta /\ In s iolts.(lts).(Q)
+    ; Ts_complete_correct   : forall (s : state), In (s, delta, s) Ts <-> In s iolts.(lts).(Q) /\
+                                        ind_quiescent s iolts
   }.
+  
+  Definition create_s_IOLTS (iolts : IOLTS) : s_IOLTS. Admitted.
+  
+  Theorem create_s_IOLTS_correct :
+    forall (iolts : IOLTS), exists (s_iolts : s_IOLTS),
+      create_s_IOLTS iolts = s_iolts.
+  Proof. Admitted.
+    
 End SectionSuspensionIOLTS.
 
 Ltac all_delta_trans := intros s s' l A;

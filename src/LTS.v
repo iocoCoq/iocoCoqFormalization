@@ -70,6 +70,7 @@ Inductive ind_transition : state -> transition_label -> state -> LTS -> Prop :=
   | transition_r2 (s s' : state) (p : LTS) :
                           In s p.(Q) /\ In s' p.(Q)
                                 /\ In (s, tau, s') p.(T) -> ind_transition s tau s' p.
+
 (* precisa mudar algo na função de baixo?*)
 Inductive ind_transition_seq : state -> list transition_label -> state -> LTS -> Prop :=
   | transition_seq_r1 (s s' : state) (l : transition_label) (p : LTS) :

@@ -1429,25 +1429,41 @@ Proof.
   apply BehaviourTransSetR'_createBehaviourTransSet'. apply H'.
 Qed.
 
-Fixpoint generate_dot' (lts : BehaviourTransSet) : string :=
+Fixpoint generate_dot {State Event : Type} (lts : set (State * Event * State))
+  (state_to_str : State -> string) (event_to_str : Event -> string) : string :=
   match lts with
   | nil => ""
   | (P, e, Q) :: tl =>
-    " <" ++ process_behaviour_to_str P ++ "> -> <" ++ process_behaviour_to_str Q ++ ">" ++
-    " [label=<" ++ event_to_str e ++ ">];" ++ (generate_dot' tl)
+    " <" ++ state_to_str P ++ "> -> <" ++ state_to_str Q ++ ">" ++
+    " [label=<" ++ event_to_str e ++ ">];" ++ (generate_dot tl state_to_str event_to_str)
   end.
+  
+Definition style_initial_state {State : Type} (q0 : State) (state_to_str : State -> string) : string :=
+  "<" ++ state_to_str q0 ++ "> [style=bold, color=red];".
 
-Definition style_initial_state (P : ProcessName) (ctx : BehaviourExpressions) : string :=
-  match getProcessBehaviour P ctx with
-  | Some B =>
-    "<" ++ process_behaviour_to_str B ++ "> [style=bold, color=red];"
+Definition generate_dot_behaviour_expressions
+  (start_process : ProcessName) (ctx : BehaviourExpressions) (i : nat): string :=
+  match createBehaviourTransSet ctx start_process i with
+  | Some lts =>
+    "digraph " ++ start_process ++ "_LTS { "
+      ++
+      match getProcessBehaviour start_process ctx with
+      | Some B => style_initial_state B process_behaviour_to_str
+      | _ => ""
+      end
+      ++
+      (generate_dot lts process_behaviour_to_str event_to_str)
+      ++ " }"
   | _ => ""
   end.
+  
+Require Import LTS.
 
-Definition generate_dot (start_process : ProcessName) (ctx : BehaviourExpressions) (i : nat): string :=
-match createBehaviourTransSet ctx start_process i with
-| Some lts =>
-  "digraph " ++ start_process ++ "_LTS { " ++ (style_initial_state start_process ctx)++
-  (generate_dot' lts) ++ " }"
-| _ => ""
-end.
+Definition nat_to_str (n : nat) : string. Admitted.
+Definition transition_label_to_str (l : transition_label) : string. Admitted.
+
+Definition generate_dot_lts (lts : LTS) : string :=
+  "digraph " ++ nat_to_str lts.(q0) ++ "_LTS { "
+    ++ style_initial_state lts.(q0) nat_to_str
+    ++ (generate_dot lts.(T) nat_to_str transition_label_to_str)
+    ++ " }".
