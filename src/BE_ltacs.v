@@ -3,6 +3,9 @@ Require Import BE_syntax.
 Import BE_syntax.BehaviourExpressionsNotations.
 Require Import BE_trans_set.
 Require Import BE_semantics.
+Require Import LTS.
+
+(* -------------------- List_ltacs --------------------*)
 
 Ltac elem_in_list :=
   simpl; repeat (try (left; reflexivity); right); fail 0 "Unable to find elem".
@@ -21,6 +24,71 @@ Ltac list_has_no_dup_with_error f :=
 
 Ltac list_has_no_dup :=
   list_has_no_dup_with_error ltac:(fun x => fail 0 x "is a duplicate in list").
+
+
+(* -------------------- LTS_ltacs --------------------*)
+
+(*
+Ltac disjoint_sets := 
+  split; try t_elem_not_in_list; apply I.
+*)
+
+Ltac solve_transition_valid :=
+  repeat split; elem_in_list.
+
+Ltac solve_list_not_empty :=
+  unfold not ; intros H ; inversion H.
+
+Ltac solve_LTS_rules Q L T q0 := apply (mkLTS Q L T q0) ;
+  repeat (
+    match goal with
+    | |- In _ _ => elem_in_list
+    | |- _ <> nil => solve_list_not_empty
+    | |- each_transition_is_valid _ _ _ => solve_transition_valid
+    | |- NoDup _ => list_has_no_dup
+    end
+  ) ; fail "One or more contextual rules were not fulfilled".
+
+(* ainda nao vi esses ltacs *)
+
+Ltac proof_absurd_different_hyp _Hd :=
+  (unfold not in _Hd; exfalso; apply _Hd; reflexivity) + (idtac).
+
+Ltac tr_not_in_list_hyp Hyp :=
+  let Hyp' := fresh "Hyp'" in
+    repeat(inversion Hyp as [Hyp'|Hyp']; [inversion Hyp'|]; clear Hyp; rename Hyp' into Hyp); inversion Hyp.
+
+Ltac core_transition _Ht3 _Ht4 _Ht5 _Ht6 := 
+  repeat(inversion _Ht4 as [_Aux|_Aux];
+    [(inversion _Aux; fail) + (subst); tr_not_in_list_hyp _Ht6 |];
+   clear _Ht4; rename _Aux into _Ht4); (inversion _Ht4; fail) + (idtac).
+
+Ltac proof_incl H :=
+  let aux := fresh "aux" in
+    repeat(inversion H as [aux|aux]; [inversion aux; fail |]; clear H; rename aux into Hs).
+
+Ltac proof_incl_goal :=
+  simpl; unfold incl; intros Hlabel Hincl; apply Hincl.
+
+Ltac proof_absurd_transition _Ht :=
+  let s1 := fresh "s1" in
+  let s2 := fresh "s2" in
+  let l := fresh "l" in
+  let p := fresh "p" in
+  let _Ht3 := fresh "_Ht3" in
+  let _Ht5 := fresh "_Ht5" in
+  let _Ht6 := fresh "_Ht6" in
+    inversion _Ht as [s1 s2 l p [_Ht3 [_Ht4 [_Ht5 _Ht6]]]]; subst; core_transition _Ht3 _Ht4 _Ht5 _Ht6.
+
+Ltac loop_tactics ltac Hyp :=
+  let Hyp' := fresh "Hyp'" in
+    repeat(
+            inversion Hyp as [Hyp'|Hyp'];
+            [ subst; ltac |];
+            clear Hyp; rename Hyp' into Hyp);
+    inversion Hyp.
+
+(* -------------------- BE_ltacs --------------------*)
 
 Ltac create_behaviour_expressions expressions :=
   refine (mkBehaviourExpressions expressions _ _ _ _);

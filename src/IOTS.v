@@ -26,9 +26,6 @@ Section SectionIOLTS.
   }.
 End SectionIOLTS.
 
-Ltac disjoint_sets := 
-  split; try t_elem_not_in_list; apply I.
-
 (* Definição 7*)
 Section SectionIOTS.
 
