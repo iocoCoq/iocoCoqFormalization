@@ -83,6 +83,7 @@ Inductive ind_state_reaches_some_other : state -> list transition_label -> LTS -
       ind_transition_seq s ll s' p ->
       ind_state_reaches_some_other s ll p.
 
+(* TODO: Move this function to the place it is required. *)
 Fixpoint all_labels_tau (ll : list transition_label) : Prop :=
   match ll with
   | []      => True
@@ -105,10 +106,8 @@ Inductive ind_one_step_reachability : state -> label -> state -> LTS -> Prop :=
       ind_empty_reachability s2 s' p ->
       ind_one_step_reachability s l s' p.
 
-(*
- ajeitei um bug, antes era possivel provar ind_seq_reachability s [] s' p
- para qualquer s'
-*)
+(* TODO: Adjust the following definition (seq_reachability_r1) such that
+         at least one label is required. *) 
 Inductive ind_seq_reachability : state -> list label -> state -> LTS -> Prop :=
   | seq_reachability_r1 (s s' : state) (p : LTS) :
       ind_empty_reachability s s' p ->
@@ -124,19 +123,19 @@ Inductive ind_has_reachability_to_some_other : state -> list label -> LTS -> Pro
       ind_has_reachability_to_some_other s ll p.
 
 (* Definition 5.1 *)
-Fixpoint f_init (s : state)
+Fixpoint f_init_aux (s : state)
   (lt : list (state * transition_label * state)) : set transition_label :=
  match lt with
  | [] => []
  | h :: t => match h with
              | (a,l,b) => if s =? a
-                          then set_add transition_label_dec l (f_init s t)
-                          else (f_init s t)
+                          then set_add transition_label_dec l (f_init_aux s t)
+                          else (f_init_aux s t)
              end
  end.
-
-Definition f_init_LTS (p : LTS) : list transition_label :=
-  f_init p.(q0) p.(T).
+ 
+Definition f_init (s : state) (p : LTS) : set transition_label :=
+  f_init_aux s p.(T).
 
 Inductive ind_init : state -> set transition_label -> LTS -> Prop :=
   | init_r1 (s : state) (ll : set transition_label) (p : LTS) :
@@ -144,9 +143,24 @@ Inductive ind_init : state -> set transition_label -> LTS -> Prop :=
         In l ll <-> exists (s' : state), In (s, l, s') p.(T)) ->
       ind_init s ll p.
 
+Theorem ind_init_reflect :
+  forall (s : state) (ll : set transition_label) (p : LTS),
+    ind_init s ll p <-> f_init s p = ll.
+Proof. Admitted.
+
+Definition f_init_LTS (p : LTS) : list transition_label :=
+  f_init p.(q0) p.
+
 Inductive ind_init_LTS : set transition_label -> LTS -> Prop :=
   | init_LTS_r1 (ll : set transition_label) (p : LTS) :
       ind_init p.(q0) ll p -> ind_init_LTS ll p.
+      
+Theorem ind_init_LTS_reflect :
+  forall (ll : set transition_label) (p : LTS),
+    ind_init_LTS ll p <-> f_init_LTS p = ll.
+Proof. Admitted.
+
+(* TODO: we have analysed the definitions up to this point *)
 
 (* Definition 5.2 *)
 Inductive ind_traces : state -> list label -> LTS -> Prop :=
