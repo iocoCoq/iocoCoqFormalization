@@ -62,16 +62,12 @@ End SectionLTS.
 (** Definition 3*)
 Inductive ind_transition : state -> transition_label -> state -> LTS -> Prop :=
   | transition_r1 (s s' : state) (l : label) (p : LTS):
-                          In s p.(Q) ->
-                          In s' p.(Q) ->
-                          In l p.(L) ->
-                          In (s, event l, s') p.(T) ->
-                          ind_transition s (event l) s' p
+      In (s, event l, s') p.(T) ->
+      ind_transition s (event l) s' p
   | transition_r2 (s s' : state) (p : LTS) :
-                          In s p.(Q) /\ In s' p.(Q)
-                                /\ In (s, tau, s') p.(T) -> ind_transition s tau s' p.
+      In (s, tau, s') p.(T) ->
+      ind_transition s tau s' p.
 
-(* precisa mudar algo na função de baixo?*)
 Inductive ind_transition_seq : state -> list transition_label -> state -> LTS -> Prop :=
   | transition_seq_r1 (s s' : state) (l : transition_label) (p : LTS) :
       ind_transition s l s' p ->
@@ -255,8 +251,7 @@ Inductive ind_der : state -> set state -> LTS -> Prop :=
 
 Inductive ind_der_LTS : set state -> LTS -> Prop :=
   | der_LTS_r1 (ls : set state) (p : LTS) :
-     ind_der p.(q0) ls p ->
-     ind_der_LTS ls p.
+                     ind_der p.(q0) ls p -> ind_der_LTS ls p.
 
 (* Definition 5.7 *)
 Definition has_finite_behaviour (s : state) (lts : LTS) : Prop :=
