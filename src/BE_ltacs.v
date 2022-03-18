@@ -88,6 +88,34 @@ Ltac loop_tactics ltac Hyp :=
             clear Hyp; rename Hyp' into Hyp);
     inversion Hyp.
 
+(* -------------------- IOTS_ltacs --------------------*)
+
+Ltac all_delta_trans := intros s s' l A;
+    repeat(inversion A as [B|B];
+             [inversion B; split; [reflexivity | split; [reflexivity | elem_in_list]] | ];
+           clear A; rename B into A); inversion A.
+(*
+Ltac all_quiescent_trans_incl := intros B;
+    repeat(inversion B as [C|C];
+      [inversion C ;
+        split;
+        [elem_in_list
+        |apply quiescent_r1; intros s' l D; destruct D as [D E];
+         repeat(inversion D as [F|F];
+           [repeat(inversion E as [G|G];
+             [subst l;
+              subst s';
+              unfold not;
+              intro H';
+              inversion H' as [I J K L M];
+              destruct M as [N [O [P Q]]];
+              repeat(inversion Q as [R|R];
+               [inversion R |]; clear Q; rename R into Q); inversion Q
+             |]; clear E; rename G into E); inversion E
+           |]; clear D; rename F into D); inversion D
+        ]
+      |]; clear B; rename C into B); inversion B.
+*)
 (* -------------------- BE_ltacs --------------------*)
 
 Ltac create_behaviour_expressions expressions :=
