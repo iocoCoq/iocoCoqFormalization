@@ -15,6 +15,7 @@ Inductive ind_out_one_state : state -> set out_label -> s_IOLTS -> Prop :=
   | out_one_state_r1 (s : state) (p : s_IOLTS) :
       In s p.(Ts) -> ind_out_one_state s [delta] p
   | out_one_state_r2 (s : state) (p : s_IOLTS) (so : set out_label) :
+      ~ In s p.(Ts) ->
       ~ In delta so ->
       (forall (l : label) (s' : state),
         In (out_event l) so <->
@@ -23,9 +24,12 @@ Inductive ind_out_one_state : state -> set out_label -> s_IOLTS -> Prop :=
 
 Definition ind_out (Q : set state) (so : set out_label) (p : s_IOLTS) : Prop :=
   forall (x : out_label),
-    In x so <->
-    exists (s : state) (so' : set out_label),
-      (In s Q /\ ind_out_one_state s so' p /\ In x so').
+    In x so -> exists (s : state) (so' : set out_label),
+                (In s Q /\ ind_out_one_state s so' p /\ In x so')
+    /\
+    forall (s : state), In s Q ->
+      exists (so' : set out_label), ind_out_one_state s so' p /\
+        forall (o : out_label), In o so' -> In o so.
 
 Lemma out_label_dec :
   forall (o1 o2 : out_label), {o1 = o2} + {o1 <> o2}.
@@ -63,10 +67,18 @@ Fixpoint f_out (ls : set state) (p : s_IOLTS) : set out_label :=
   end.
 
 Definition ind_ioco (i : IOTS) (s : IOLTS) : Prop :=
+  forall (t : list label) (Qi Qs : set state) (out_i out_s : set out_label),
+    ind_s_traces_LTS t (create_s_IOLTS s) ->
+    ind_after_LTS t Qi i.(embedded_iolts).(sc_lts).(lts) ->
+    ind_after_LTS t Qs s.(sc_lts).(lts) ->
+    ind_out Qi out_i (create_s_IOLTS i.(embedded_iolts)) ->
+    ind_out Qs out_s (create_s_IOLTS s) ->
+    forall (o : out_label), In o out_i -> In o out_s.
+
+Definition f_ioco (i : IOTS) (s : IOLTS) : Prop :=
   forall (t : list label),
     ind_s_traces_LTS t (create_s_IOLTS s) ->
       incl (f_out
             (f_after_LTS t i.(embedded_iolts).(sc_lts).(lts))
             (create_s_IOLTS i.(embedded_iolts)))
            (f_out (f_after_LTS t s.(sc_lts).(lts)) (create_s_IOLTS s)).
-

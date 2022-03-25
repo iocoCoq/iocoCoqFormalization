@@ -135,8 +135,6 @@ Section SectionSuspensionIOLTS.
   Record s_IOLTS : Type := mksIOLTS {
       iolts : IOLTS
     ; Ts : set state
-    ; valid_del_transitions : forall (s : state),
-                                        In s Ts -> In s iolts.(sc_lts).(lts).(Q)
     ; Ts_complete_correct :
         forall (s : state),
           In s Ts <-> In s iolts.(sc_lts).(lts).(Q) /\ ind_quiescent s iolts
@@ -204,7 +202,6 @@ Section SectionSuspensionIOLTS.
     mksIOLTS
       iolts
       (create_Ts iolts)
-      (create_Ts_valid_del_transitions iolts)
       (create_Ts_complete_correct iolts).
 
   Theorem create_s_IOLTS_correct :
