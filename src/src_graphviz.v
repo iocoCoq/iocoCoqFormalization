@@ -7,13 +7,14 @@ Require Import Coq.Lists.List.
 Import Coq.Lists.List.ListNotations.
 Require Import String.
 
+Local Open Scope string_scope.
+
 Definition event_to_str (e : Event) : string :=
   match e with
   | InternalEvent => "τ"
   | ExternalEvent n => n
   end.
 
-Local Open Scope string_scope.
 Fixpoint process_behaviour_to_str (B : ProcessBehaviour) : string :=
   match B with
   | Prefix e B' => "(" ++ event_to_str e ++ ";" ++ process_behaviour_to_str B' ++ ")"
@@ -109,9 +110,16 @@ Definition iolts_transition_label_to_str (Li : set label)
 
 Definition generate_dot_IOLTS (iolts : IOLTS) : string :=
   "digraph IOLTS { "
-  ++ style_initial_state iolts.(lts).(q0) nat_to_str
-  ++ (generate_dot iolts.(lts).(T) nat_to_str
+  ++ style_initial_state iolts.(sc_lts).(lts).(q0) nat_to_str
+  ++ (generate_dot iolts.(sc_lts).(lts).(T) nat_to_str
       (iolts_transition_label_to_str iolts.(L_i)))
   ++ " }".
 
+Definition generate_dot_s_IOLTS (s_iolts : s_IOLTS) : string :=
+  "digraph s_IOLTS { "
+  ++ style_initial_state s_iolts.(iolts).(sc_lts).(lts).(q0) nat_to_str
+  ++ (generate_dot s_iolts.(iolts).(sc_lts).(lts).(T) nat_to_str
+      (iolts_transition_label_to_str s_iolts.(iolts).(L_i)))
+  ++ generate_dot (map (fun x => (x, "δ", x)) s_iolts.(Ts)) nat_to_str id
+  ++ " }".
 Local Close Scope string_scope.

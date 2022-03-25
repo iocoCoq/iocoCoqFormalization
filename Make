@@ -1,2 +1,2 @@
 -R . IOCO
-src/list_helper.v src/BE_syntax.v src/BE_semantics.v src/LTS.v src/BE_trans_set.v src/BE_trans_set_creator.v src/BE_trans_set_converter.v src/BE_ltacs.v src/IOTS.v examples/syntax.v examples/semantics.v examples/trans_set.v examples/graphviz.v examples/LTS_ex.v
+src/list_helper.v src/BE_syntax.v src/BE_semantics.v src/LTS.v src/LTS_functions.v src/BE_trans_set.v src/BE_trans_set_creator.v src/BE_trans_set_converter.v src/BE_ltacs.v src/IOTS.v examples/syntax.v examples/semantics.v examples/trans_set.v examples/graphviz.v examples/LTS_ex.v

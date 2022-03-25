@@ -83,13 +83,6 @@ Inductive ind_state_reaches_some_other : state -> list transition_label -> LTS -
       ind_transition_seq s ll s' p ->
       ind_state_reaches_some_other s ll p.
 
-(* TODO: Move this function to the place it is required. *)
-Fixpoint all_labels_tau (ll : list transition_label) : Prop :=
-  match ll with
-  | []      => True
-  | h :: tl => h = tau /\ all_labels_tau tl
-  end.
-
 (** Definition 4*)
 Inductive ind_empty_reachability : state -> state -> LTS -> Prop :=
   | empty_reachability_r1 (s : state) (p : LTS) :
@@ -106,8 +99,6 @@ Inductive ind_one_step_reachability : state -> label -> state -> LTS -> Prop :=
       ind_empty_reachability s2 s' p ->
       ind_one_step_reachability s l s' p.
 
-(* TODO: Adjust the following definition (seq_reachability_r1) such that
-         at least one label is required. *) 
 Inductive ind_seq_reachability : state -> list label -> state -> LTS -> Prop :=
   | seq_reachability_r1 (s s' : state) (p : LTS) :
       ind_empty_reachability s s' p ->
@@ -122,43 +113,15 @@ Inductive ind_has_reachability_to_some_other : state -> list label -> LTS -> Pro
       ind_seq_reachability s ll s' p ->
       ind_has_reachability_to_some_other s ll p.
 
-(* Definition 5.1 *)
-Fixpoint f_init_aux (s : state)
-  (lt : list (state * transition_label * state)) : set transition_label :=
- match lt with
- | [] => []
- | h :: t => match h with
-             | (a,l,b) => if s =? a
-                          then set_add transition_label_dec l (f_init_aux s t)
-                          else (f_init_aux s t)
-             end
- end.
- 
-Definition f_init (s : state) (p : LTS) : set transition_label :=
-  f_init_aux s p.(T).
-
 Inductive ind_init : state -> set transition_label -> LTS -> Prop :=
   | init_r1 (s : state) (ll : set transition_label) (p : LTS) :
       (forall (l : transition_label),
         In l ll <-> exists (s' : state), In (s, l, s') p.(T)) ->
       ind_init s ll p.
 
-Theorem ind_init_reflect :
-  forall (s : state) (ll : set transition_label) (p : LTS),
-    ind_init s ll p <-> f_init s p = ll.
-Proof. Admitted.
-
-Definition f_init_LTS (p : LTS) : list transition_label :=
-  f_init p.(q0) p.
-
 Inductive ind_init_LTS : set transition_label -> LTS -> Prop :=
   | init_LTS_r1 (ll : set transition_label) (p : LTS) :
       ind_init p.(q0) ll p -> ind_init_LTS ll p.
-      
-Theorem ind_init_LTS_reflect :
-  forall (ll : set transition_label) (p : LTS),
-    ind_init_LTS ll p <-> f_init_LTS p = ll.
-Proof. Admitted.
 
 (* TODO: we have analysed the definitions up to this point *)
 
@@ -172,49 +135,7 @@ Inductive ind_traces_LTS : list label -> LTS -> Prop :=
   | traces_LTS_r1 (ll : list label) (p : LTS) :
       ind_traces p.(q0) ll p -> ind_traces_LTS ll p.
 
-Definition b_transition_label_dec (t1 t2 : transition_label) : bool :=
-  if transition_label_dec t1 t2
-  then true
-  else false.
-
-Local Open Scope bool_scope.
 (* Definition 5.3 *)
-Fixpoint f_transition_seq (s : state) (l : transition_label)
-  (lt : list transition) : set state :=
-  match lt with
-  | []               =>  []
-  | (a, l', b) :: t  =>  if (s =? a) && (b_transition_label_dec l l')
-                         then set_add Nat.eq_dec b (f_transition_seq s l t)
-                         else f_transition_seq s l t
-  end.
-Local Close Scope bool_scope.
-
-Fixpoint f_after_aux' (ls : set state) (l : transition_label)
-  (lt : list (state * transition_label * state)) : set state :=
-  match ls with
-  | []      =>  []
-  | h :: t  =>  set_union Nat.eq_dec (f_transition_seq h l lt) (f_after_aux' t l lt)
-  end.
-
-Fixpoint f_after_aux (ls : set state) (ll : list transition_label)
-    (lt : list transition) : set state :=
-  match ls, ll with
-  | [], _               =>  []
-  | a, []               =>  a
-  | h1 :: t1, h2 :: t2  =>
-    set_union
-      Nat.eq_dec
-      (f_after_aux (f_transition_seq h1 h2 lt) t2 lt)
-      (f_after_aux (f_after_aux' t1 h2 lt) t2 lt)
-  end.
-
-Definition f_after (s : state) (ll : list transition_label)
-    (lt : list transition) : set state :=
-  f_after_aux [s] ll lt.
-
-Definition f_after_LTS (ll : list transition_label) (p : LTS) : set state := 
-  f_after p.(q0) ll p.(T).
-
 Inductive ind_after : state -> list label -> set state -> LTS -> Prop :=
   | after_r1 (s : state) (ll : list label) (ls : list state) (p : LTS) :
       (forall (a : state),
@@ -300,11 +221,20 @@ Definition image_finite_LTS (lts : LTS) : Prop :=
   image_finite lts.(q0) lts.
 
 (* Definição 5.11 *)
+Fixpoint all_labels_tau (ll : list transition_label) : Prop :=
+  match ll with
+  | []      => True
+  | h :: tl => h = tau /\ all_labels_tau tl
+  end.
+
+(* Definição 5.12 *)
 Definition strongly_converging (lts : LTS) : Prop :=
   forall (s : state) (t : list transition_label),
     t <> [] /\ all_labels_tau t ->
     ~ ind_transition_seq s t s lts.
 
-(* Definição 5.12 *)
-Definition is_valid_LTS (ll : set label) (lts : LTS) : Prop :=
-  strongly_converging lts /\ lts.(L) = ll.
+(* Strongly converging LTS *)
+Record SC_LTS : Type := mkSC_LTS {
+      lts : LTS
+    ; is_strongly_converging  : strongly_converging lts
+  }.
