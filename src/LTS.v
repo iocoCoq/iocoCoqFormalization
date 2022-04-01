@@ -22,7 +22,7 @@ Section SectionLTS.
   Proof.
     decide equality.
     apply string_dec.
-  Qed.
+  Defined.
 
   Theorem transition_dec : forall x y : transition, {x = y} + {x <> y}.
   Proof.
@@ -32,7 +32,7 @@ Section SectionLTS.
       + decide equality.
         apply string_dec.
       + apply Nat.eq_dec.
-  Qed.
+  Defined.
 
   Fixpoint each_transition_is_valid
     (t : list transition) (Q : list state) (L : list label) : Prop :=
@@ -136,11 +136,9 @@ Inductive ind_traces_LTS : list label -> LTS -> Prop :=
       ind_traces p.(q0) ll p -> ind_traces_LTS ll p.
 
 (* Definition 5.3 *)
-Inductive ind_after : state -> list label -> set state -> LTS -> Prop :=
-  | after_r1 (s : state) (ll : list label) (ls : list state) (p : LTS) :
-      (forall (a : state),
-        In a p.(Q) -> ind_seq_reachability s ll a p <-> In a ls) ->
-      ind_after s ll ls p.
+Definition ind_after (s : state) (ll : list label) (ls : list state) (p : LTS)
+    : Prop :=
+  forall (a : state), ind_seq_reachability s ll a p <-> In a ls.
 
 Inductive ind_after_LTS : list label -> list state -> LTS -> Prop :=
   | after_LTS_r1 (ll : list label) (ls : list state) (p : LTS) :
