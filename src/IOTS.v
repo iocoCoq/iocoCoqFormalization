@@ -3,8 +3,6 @@ Require Import list_helper.
 Require Import Coq.Lists.List.
 Require Import Coq.Lists.ListSet.
 Import Coq.Lists.List.ListNotations.
-Require Import RelationClasses.
-Require Import BE_ltacs.
 Require Import String.
 Require Import Bool.
 
@@ -104,14 +102,6 @@ Section SectionIOTS.
     ; input_actions_activated : valid_iots embedded_iolts
   }.
 End SectionIOTS.
-
-Ltac exists_reachability :=
-apply seq_reachability_r1; right ; left; split ; split ;
-unfold not ; intros ; try (inversion H) ;
-try reflexivity;
-split; simpl; unfold not; try intro; try inversion H.
-
-Ltac empty_reachability_left := left; reflexivity.
 
 (* Definição 8*)
 Inductive ind_quiescent : state -> IOLTS -> Prop :=
@@ -213,10 +203,54 @@ Section SectionSuspensionIOLTS.
 
 End SectionSuspensionIOLTS.
 
-Inductive ind_s_traces : state -> list label -> s_IOLTS -> Prop :=
-| s_traces_r1 : forall (s : state) (t : list label) (p : s_IOLTS),
-                   ind_traces s t p.(iolts).(sc_lts).(lts) -> ind_s_traces s t p.
+Inductive s_label : Type :=
+  | s_event : label -> s_label
+  | delta : s_label.
 
-Inductive ind_s_traces_LTS : list label -> s_IOLTS -> Prop :=
-| s_traces_LTS_r1 : forall (t : list label) (p : s_IOLTS),
-                   ind_traces_LTS t p.(iolts).(sc_lts).(lts) -> ind_s_traces_LTS t p.
+Fixpoint s_trace_without_delta (l : list s_label) : list label :=
+  match l with
+  | [] => []
+  | s_event e :: t => e :: s_trace_without_delta t
+  | delta :: t => s_trace_without_delta t
+  end.
+
+Inductive ind_s_seq_reachability : state -> list s_label -> state -> s_IOLTS
+    -> Prop :=
+  | s_seq_reachability_r1  (s s' : state) (p : s_IOLTS) :
+      ind_empty_reachability s s' p.(iolts).(sc_lts).(lts) ->
+      ind_s_seq_reachability s [] s' p
+  | s_seq_reachability_r2 (s s' si : state) (l: label) (t : list s_label) (p : s_IOLTS) :
+      ind_one_step_reachability s l si p.(iolts).(sc_lts).(lts) ->
+      ind_s_seq_reachability si t s' p ->
+      ind_s_seq_reachability s (s_event l :: t) s' p
+  | s_seq_reachability_r3 (s s' : state) (t : list s_label) (p : s_IOLTS) :
+      In s p.(Ts) ->
+      ind_s_seq_reachability s t s' p ->
+      ind_s_seq_reachability s (delta :: t) s' p.
+
+Lemma s_seq_reachability_eqv_seq_reachability :
+  forall (s s': state) (l: list s_label) (p : s_IOLTS),
+    ind_s_seq_reachability s l s' p ->
+    ind_seq_reachability s (s_trace_without_delta l) s' p.(iolts).(sc_lts).(lts).
+Proof.
+  intros s s' l p H. induction H.
+  - simpl. apply seq_reachability_r1; auto.
+  - simpl. apply seq_reachability_r2 with (si := si); auto.
+  - simpl; auto.
+Qed.
+
+Definition ind_s_traces (s : state) (t : list s_label) (p : s_IOLTS) : Prop :=
+  exists (s' : state), ind_s_seq_reachability s t s' p.
+
+Lemma s_trace_eqv_trace :
+  forall (s : state) (l: list s_label) (p : s_IOLTS),
+    ind_s_traces s l p ->
+    ind_traces s (s_trace_without_delta l) p.(iolts).(sc_lts).(lts).
+Proof.
+  intros s l p H. unfold ind_s_traces in H. destruct H as [s' H].
+  apply traces_r1. apply has_reachability_to_some_other_r1 with (s' := s').
+  apply s_seq_reachability_eqv_seq_reachability; auto.
+Qed.
+
+Definition ind_s_traces_LTS (t : list s_label) (p : s_IOLTS) : Prop :=
+  ind_s_traces p.(iolts).(sc_lts).(lts).(q0) t p.
