@@ -3,8 +3,8 @@ Require Import BE_syntax.
 Import BE_syntax.BehaviourExpressionsNotations.
 Require Import BE_trans_set.
 Require Import BE_semantics.
+Require Import IOTS.
 Require Import LTS.
-
 (* -------------------- List_ltacs --------------------*)
 
 Ltac elem_in_list :=
@@ -25,13 +25,15 @@ Ltac list_has_no_dup_with_error f :=
 Ltac list_has_no_dup :=
   list_has_no_dup_with_error ltac:(fun x => fail 0 x "is a duplicate in list").
 
+Ltac disjoint_sets :=
+  unfold is_disjoint;
+  repeat (apply Forall_cons; [ unfold not; intros H; expand_In H; fail |]);
+  (apply Forall_nil + fail "Sets not disjoint").
+
+Ltac proof_Equiv := 
+  unfold list_helper.Equiv; intros x; split; intros H; expand_In H; elem_in_list.
 
 (* -------------------- LTS_ltacs --------------------*)
-
-(*
-Ltac disjoint_sets := 
-  split; try t_elem_not_in_list; apply I.
-*)
 
 Ltac solve_transition_valid :=
   repeat split; elem_in_list.
@@ -48,6 +50,68 @@ Ltac solve_LTS_rules Q L T q0 := apply (mkLTS Q L T q0) ;
     | |- NoDup _ => list_has_no_dup
     end
   ) ; fail "One or more contextual rules were not fulfilled".
+
+Ltac proof_ind_init_fst_branch_loop ls H :=
+match ls with
+| ?h :: ?t  =>  inversion H as [A|A];
+                [subst; exists h; elem_in_list |];
+                clear H; rename A into H;
+                proof_ind_init_fst_branch_loop t H
+| _ =>  inversion H
+end.
+
+Ltac proof_ind_init_fst_branch ls :=
+  intros H;
+  proof_ind_init_fst_branch_loop ls H.
+
+Ltac proof_ind_init_snd_branch :=
+  intros H;
+  destruct H;
+  repeat(inversion H as [A|A];
+         [ inversion A; elem_in_list |];
+         clear H; rename A into H); inversion H.
+
+Ltac proof_ind_init ls :=
+  try apply init_LTS_r1;
+  apply init_r1;
+  split;
+  [proof_ind_init_fst_branch ls
+  |proof_ind_init_snd_branch  ].
+
+Ltac explore_transition _Ht :=
+  let s := fresh "s" in
+  let s' := fresh "s'" in
+  let l := fresh "l" in
+  let p := fresh "p" in
+  let H := fresh "H" in
+    inversion _Ht as [ s s' l p H | s s' p H]; expand_In H.
+
+
+Ltac proof_absurd_transition H :=
+  explore_transition H; fail "Unable to proof invalid transition".
+
+Ltac proof_absurd_empty_reachability _Haer :=
+  let s := fresh "s" in
+  let si := fresh "si" in
+  let s' := fresh "s'" in
+  let p := fresh "p" in
+  let H1 := fresh "H1" in
+  let H2 := fresh "H2" in
+    inversion _Haer as [| s si s' p H1 H2]; explore_transition H1;
+    subst; proof_absurd_empty_reachability H2.
+
+Ltac proof_absurd_transition_seq _Hts :=
+  let s := fresh "s" in
+  let s' := fresh "s'" in
+  let si := fresh "si" in
+  let l1 := fresh "l1" in
+  let l2 := fresh "l2" in
+  let ll := fresh "ll" in
+  let p := fresh "p" in
+  let H1 := fresh "H1" in
+  let H2 := fresh "H2" in
+   inversion _Hts as [s s' l1 p H1 | s s' si l1 l2 ll p H1 H2];
+   subst; explore_transition H1; subst; proof_absurd_transition_seq H2.
 
 (* ainda nao vi esses ltacs *)
 
@@ -70,16 +134,6 @@ Ltac proof_incl H :=
 Ltac proof_incl_goal :=
   simpl; unfold incl; intros Hlabel Hincl; apply Hincl.
 
-Ltac proof_absurd_transition _Ht :=
-  let s1 := fresh "s1" in
-  let s2 := fresh "s2" in
-  let l := fresh "l" in
-  let p := fresh "p" in
-  let _Ht3 := fresh "_Ht3" in
-  let _Ht5 := fresh "_Ht5" in
-  let _Ht6 := fresh "_Ht6" in
-    inversion _Ht as [s1 s2 l p [_Ht3 [_Ht4 [_Ht5 _Ht6]]]]; subst; core_transition _Ht3 _Ht4 _Ht5 _Ht6.
-
 Ltac loop_tactics ltac Hyp :=
   let Hyp' := fresh "Hyp'" in
     repeat(
@@ -89,6 +143,15 @@ Ltac loop_tactics ltac Hyp :=
     inversion Hyp.
 
 (* -------------------- IOTS_ltacs --------------------*)
+
+Ltac solve_IOLTS_rules lts Li Lu := apply (mkIOLTS lts Li Lu) ;
+  repeat (
+    match goal with
+    | |- is_disjoint _ _ => disjoint_sets
+    | |- list_helper.Equiv _ _ => proof_Equiv
+    | |- NoDup _ => list_has_no_dup
+    end
+  ) ; fail "One or more contextual rules were not fulfilled".
 
 Ltac all_delta_trans := intros s s' l A;
     repeat(inversion A as [B|B];
