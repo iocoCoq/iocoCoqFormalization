@@ -110,7 +110,7 @@ Proof.
   - admit.
 Admitted.
 
-(* TODO: adjust to Q1 [=] Q2 *)
+(* TODO: adjust to Q1 [=] Q2 and move to /src *)
 Lemma ind_s_after_IOLTS_deterministic :
   forall (t : list s_label) (s : s_IOLTS) (Q1 Q2 : set state),
     ind_s_after_IOLTS t Q1 s ->
