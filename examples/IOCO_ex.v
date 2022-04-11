@@ -72,9 +72,59 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma s1_traces :
+  forall (t : list s_label) (P : Prop),
+    (ind_s_traces_LTS t (create_s_IOLTS spec_s1_IOLTS) -> P)
+    <-> 
+    (t = [] \/ t = [s_event "a"] \/ t = [s_event "a" ; s_event "x"] -> P).
+Proof.
+  intros t P. split.
+  - intros H1 H2. apply H1.
+    unfold ind_s_traces_LTS. simpl.
+    unfold ind_s_traces.
+    destruct H2 as [H2 | [H2 | H2]].
+    -- rewrite H2. exists 1.
+       apply s_seq_reachability_r1.
+       apply empty_reachability_r1.
+    -- rewrite H2. exists 2.
+       apply s_seq_reachability_r2 with (si := 2).
+       --- apply one_step_reachability_r1 with (s1 := 1) (s2 := 2).
+           ---- apply empty_reachability_r1.
+           ---- apply transition_r1. simpl. left. reflexivity.
+           ---- apply empty_reachability_r1.
+       --- apply s_seq_reachability_r1. 
+           apply empty_reachability_r1.
+    -- rewrite H2. exists 3.
+       apply s_seq_reachability_r2 with (si := 2).
+       --- apply one_step_reachability_r1 with (s1 := 1) (s2 := 2).
+           ---- apply empty_reachability_r1.
+           ---- apply transition_r1. simpl. left. reflexivity.
+           ---- apply empty_reachability_r1.
+       --- apply s_seq_reachability_r2 with (si := 3).
+           ---- apply one_step_reachability_r1 with (s1 := 2) (s2 := 3).
+                ----- apply empty_reachability_r1.
+                ----- apply transition_r1. simpl. right. left. reflexivity.
+                ----- apply empty_reachability_r1.
+           ---- apply s_seq_reachability_r1.
+                apply empty_reachability_r1.
+  - admit.
+Admitted.
 
 Example i1_ioco_s1 : ind_ioco imp_i1 spec_s1_IOLTS.
-Proof. Admitted.
+Proof.
+  unfold ind_ioco. intros Qi Qs t out_i out_s H.
+  generalize dependent Qi.
+  generalize dependent Qs.  
+  generalize dependent out_i.
+  generalize dependent out_s.
+  generalize dependent H.
+  rewrite s1_traces. intros H.
+  intros out_s out_i Qs Qi.
+  destruct H as [H | [H | H]] ; rewrite H.
+  - admit.
+  - admit.
+  - admit.
+Admitted.
 
 (*
   unfold ind_ioco. intros Qi Qs t out_i out_s H H1 H2 H3 H4.
