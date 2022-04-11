@@ -216,7 +216,7 @@ Definition ind_s_after_IOLTS (ll : list s_label) (ls : list state)
   ind_s_after p.(iolts).(sc_lts).(lts).(q0) ll ls p.
 
 Definition ind_ioco (i : IOTS) (s : IOLTS) : Prop :=
-  forall (Qi Qs : set state) (t out_i out_s : set s_label),
+  forall (Qi Qs : set state) (t : list s_label) (out_i out_s : set s_label),
     ind_s_traces_LTS t (create_s_IOLTS s) ->
     ind_s_after_IOLTS t Qi (create_s_IOLTS i.(embedded_iolts)) ->
     ind_s_after_IOLTS t Qs (create_s_IOLTS s) ->
