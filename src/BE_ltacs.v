@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import BE_syntax.
 Import BE_syntax.BehaviourExpressionsNotations.
 Require Import BE_trans_set.
+Import Coq.Lists.List.ListNotations.
 Require Import BE_semantics.
 Require Import IOTS.
 Require Import LTS.
@@ -78,7 +79,7 @@ Ltac proof_ind_init ls :=
   [proof_ind_init_fst_branch ls
   |proof_ind_init_snd_branch  ].
 
-Ltac explore_transition _Ht :=
+Ltac expand_transition _Ht :=
   let s := fresh "s" in
   let s' := fresh "s'" in
   let l := fresh "l" in
@@ -86,9 +87,58 @@ Ltac explore_transition _Ht :=
   let H := fresh "H" in
     inversion _Ht as [ s s' l p H | s s' p H]; expand_In H.
 
+Ltac expand_empty_reachability H :=
+  let H1 := fresh "H'" in
+  let H2 := fresh "H'" in
+    inversion H as [ | ? ? ? ? H1 H2];
+    [| expand_transition H1; expand_empty_reachability H2]; subst.
+
+Ltac expand_one_step_reachability H :=
+  let H_empty1 := fresh "H_empty1" in
+  let H_trans := fresh "H_trans" in
+  let H_empty2 := fresh "H_empty2" in
+    inversion H as [? ? ? ? ? ? H_empty1 H_trans H_empty2];
+    expand_empty_reachability H_empty1; expand_transition H_trans;
+    expand_empty_reachability H_empty2; clear H_empty1 H_trans H_empty2.
+
+Ltac expand_s_seq_reachability H :=
+  let H_empty := fresh "H_empty" in
+  let H_one_step := fresh "H_one_step" in
+  let H_seq := fresh "H_seq" in
+  let H_Ts := fresh "H_Ts" in
+    match type of H with
+    | ind_s_seq_reachability _ [ ] _ _ =>
+        inversion H as [ ? ? ? H_empty | |]; expand_empty_reachability H_empty
+    | ind_s_seq_reachability _ (s_event _ :: _) _ _ =>
+        inversion H as [| ? ? ? ? ? ? H_one_step H_seq |];
+        expand_one_step_reachability H_one_step;
+        expand_s_seq_reachability H_seq; clear H_seq H_one_step
+    | ind_s_seq_reachability _ (delta :: _) _ _ =>
+        inversion H as [| | ? ? ? ? H_Ts H_seq ]; expand_In H_Ts;
+        expand_s_seq_reachability H_seq; clear H_Ts H_one_step
+    | ind_s_seq_reachability _ _ _ _ => idtac
+    | _ => fail "Invalid Hypothesis format"
+    end.
+
+Ltac expand_out_one_state H x H_In_x_so :=
+  let H_In_Ts := fresh "H_In_Ts" in
+  let H_neq_In_Ts := fresh "H_neq_In_Ts" in
+  let H_neq_In_so := fresh "H_neq_In_so" in
+  let H_so := fresh "H_so" in
+  let H1 := fresh "H1" in
+  let H2 := fresh "H2" in
+    inversion H as [? ? H_In_Ts | ? ? ? H_neq_In_Ts H_neq_In_so H_so];
+    [ expand_In H_In_Ts; clear H_In_Ts; subst; expand_In H_In_x_so |
+      (destruct H_neq_In_Ts; elem_in_list) +
+      (destruct x; [ | destruct H_neq_In_so; apply H_In_x_so ];
+       clear H_neq_In_Ts H_neq_In_so; subst;
+       apply H_so in H_In_x_so; destruct H_In_x_so as [? [H1 H2]];
+       expand_In H1; subst; expand_transition H2; subst; clear H1 H2)
+    ].
+
 
 Ltac proof_absurd_transition H :=
-  explore_transition H; fail "Unable to proof invalid transition".
+  expand_transition H; fail "Unable to proof invalid transition".
 
 Ltac proof_absurd_empty_reachability _Haer :=
   let s := fresh "s" in
@@ -97,7 +147,7 @@ Ltac proof_absurd_empty_reachability _Haer :=
   let p := fresh "p" in
   let H1 := fresh "H1" in
   let H2 := fresh "H2" in
-    inversion _Haer as [| s si s' p H1 H2]; explore_transition H1;
+    inversion _Haer as [| s si s' p H1 H2]; expand_transition H1;
     subst; proof_absurd_empty_reachability H2.
 
 Ltac proof_absurd_transition_seq _Hts :=
@@ -111,7 +161,7 @@ Ltac proof_absurd_transition_seq _Hts :=
   let H1 := fresh "H1" in
   let H2 := fresh "H2" in
    inversion _Hts as [s s' l1 p H1 | s s' si l1 l2 ll p H1 H2];
-   subst; explore_transition H1; subst; proof_absurd_transition_seq H2.
+   subst; expand_transition H1; subst; proof_absurd_transition_seq H2.
 
 (* ainda nao vi esses ltacs *)
 

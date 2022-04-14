@@ -28,7 +28,7 @@ Proof.
   - unfold all_labels_tau in H. destruct H as [_ [H _]].
     unfold not. intros H'. inversion H'.
     + subst. proof_absurd_transition H5.
-    + subst. explore_transition H3.
+    + subst. expand_transition H3.
 Defined.
 
 Definition fig4_k3_IOLTS : IOLTS.
@@ -60,7 +60,7 @@ Proof.
   - unfold all_labels_tau in H. destruct H as [_ [H _]].
     unfold not. intros H'. inversion H'.
     + subst. proof_absurd_transition H5.
-    + subst. explore_transition H3.
+    + subst. expand_transition H3.
 Defined.
 
 Definition fig6_r_IOLTS : IOLTS.
@@ -92,7 +92,7 @@ Proof.
   - unfold all_labels_tau in H. destruct H as [_ [H _]].
     unfold not. intros H'. inversion H'.
     + subst. proof_absurd_transition H5.
-    + subst. explore_transition H3.
+    + subst. expand_transition H3.
 Defined.
 
 Definition imp_i1_IOLTS : IOLTS.
@@ -167,7 +167,7 @@ Proof.
   - unfold all_labels_tau in H. destruct H as [_ [H _]].
     unfold not. intros H'. inversion H'.
     + subst. proof_absurd_transition H5.
-    + subst. explore_transition H3.
+    + subst. expand_transition H3.
 Defined.
 
 Definition spec_s1_IOLTS : IOLTS.
@@ -250,7 +250,7 @@ Proof.
   - unfold all_labels_tau in H. destruct H as [_ [H _]].
     unfold not. intros H'. inversion H'.
     + subst. proof_absurd_transition H5.
-    + subst. explore_transition H3.
+    + subst. expand_transition H3.
 Defined.
 
 Definition spec_s3_IOLTS : IOLTS.

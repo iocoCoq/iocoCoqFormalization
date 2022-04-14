@@ -21,13 +21,13 @@ Inductive ind_out_one_state : state -> set s_label -> s_IOLTS -> Prop :=
       ind_out_one_state s so p.
 
 Definition ind_out (Q : set state) (so : set s_label) (p : s_IOLTS) : Prop :=
-  forall (x : s_label),
+  (forall (x : s_label),
     (In x so -> exists (s : state) (so' : set s_label),
-                (In s Q /\ ind_out_one_state s so' p /\ In x so'))
+                (In s Q /\ ind_out_one_state s so' p /\ In x so')))
     /\
-    forall (s : state), In s Q ->
+    (forall (s : state), In s Q ->
       exists (so' : set s_label), ind_out_one_state s so' p /\
-        forall (o : s_label), In o so' -> In o so.
+        forall (o : s_label), In o so' -> In o so).
 
 Theorem s_label_dec : forall x y : s_label, {x = y} + {x <> y}.
 Proof.
@@ -121,7 +121,7 @@ Proof.
   intros.
   split.
   - intros H. unfold Equiv. intros x. split.
-    + intros H'. unfold ind_out in H. specialize (H x). destruct H as [H _].
+    + intros H'. unfold ind_out in H. destruct H as [H _].
       apply H in H'. destruct H' as [s [so' [H'_1 [H'_2 H'_3]]]].
       clear H. induction Q.
       * inversion H'_1.
@@ -138,7 +138,7 @@ Proof.
         -- simpl. destruct (set_mem Nat.eq_dec a (Ts p)).
            ++ apply set_add_intro. right. apply IHQ. apply H'_1.
            ++ apply set_union_intro2. apply IHQ. apply H'_1.
-    + intros H'. unfold ind_out in H. specialize (H x). destruct H as [_ H].
+    + intros H'. unfold ind_out in H. destruct H as [_ H].
       induction Q; try inversion H'. simpl in H'.
       assert (H_aux : In a (a :: Q)). { left. reflexivity. } apply H in H_aux.
       destruct H_aux as [so' [H_1 H_2]].
@@ -162,7 +162,7 @@ Proof.
            ++ intros s H'''. apply H. right. apply H'''.
            ++ apply H'.
   - intros H. unfold ind_out. split.
-    + intros H'. apply H in H'. clear H. induction Q; [inversion H'|].
+    + intros x H'. apply H in H'. clear H. induction Q; [inversion H'|].
       simpl in H'. destruct (set_mem Nat.eq_dec a (Ts p)) eqn:H.
       * apply set_add_iff in H'. destruct H' as [H'|H'].
         -- subst. exists a, [delta]. repeat split; try (left; reflexivity).
