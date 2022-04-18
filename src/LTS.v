@@ -205,10 +205,11 @@ Definition finite_state_LTS (lts : LTS) : Prop :=
       ind_der_LTS ls lts -> length ls < n.
 
 (* Definition 5.9 *)
-Definition is_deterministic (lts : LTS) : Prop :=
-  forall (s : state) (t : list label) (ls : set state),
-  In s lts.(Q) /\ ind_traces s t lts
-    /\ ind_after s t ls lts -> length ls = 1.
+Definition ind_deterministic (lts : LTS) : Prop :=
+  forall (t : list label) (ls : set state),
+    ind_traces_LTS t lts ->
+    ind_after_LTS t ls lts ->
+    length ls = 1.
 
 (* Definição 5.10 *)
 Definition image_finite (p : state) (lts : LTS) : Prop :=
