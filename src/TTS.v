@@ -18,8 +18,8 @@ Section SectionTTS.
     ; fail_is_valid : In fail_state iots.(embedded_iolts).(sc_lts).(lts).(Q)
     ; pass_is_valid : In pass_state iots.(embedded_iolts).(sc_lts).(lts).(Q)
     ; theta_is_valid : In theta iots.(embedded_iolts).(L_u)
-    ; TTS_Li := set_remove string_dec theta iots.(embedded_iolts).(L_u)
-    ; TTS_Lu := iots.(embedded_iolts).(L_i)
+    ; TTS_Li := iots.(embedded_iolts).(L_u)
+    ; TTS_Lu := set_remove string_dec theta iots.(embedded_iolts).(L_i)
     ; is_deterministic : ind_deterministic iots.(embedded_iolts).(sc_lts).(lts)
     ; pass_fail_diff : pass_state <> fail_state
     ; pass_cycle :
