@@ -1,4 +1,4 @@
-Require Import BE_ltacs.
+Require Import ltacs.
 Require Import String.
 Require Import Coq.Lists.List.
 Import Coq.Lists.List.ListNotations.

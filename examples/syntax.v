@@ -1,4 +1,4 @@
-Require Import BE_ltacs.
+Require Import ltacs.
 Require Import BE_syntax.
 Import BE_syntax.BehaviourExpressionsNotations.
 Require Import Coq.Lists.List.

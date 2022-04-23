@@ -2,7 +2,7 @@ Require Import IOCO.
 Require Import IOTS.
 Require Import LTS.
 Require Import list_helper.
-Require Import BE_ltacs.
+Require Import ltacs.
 Require Import LTS_ex.
 Require Export IOTS_ex.
 Require Import Coq.Lists.List.

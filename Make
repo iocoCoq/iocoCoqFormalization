@@ -7,7 +7,7 @@ src/LTS_functions.v
 src/BE_trans_set.v
 src/BE_trans_set_creator.v
 src/BE_trans_set_converter.v
-src/BE_ltacs.v
+src/ltacs.v
 src/IOTS.v
 src/IOCO.v
 src/TTS.v
