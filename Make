@@ -10,11 +10,12 @@ src/BE_trans_set_converter.v
 src/BE_ltacs.v
 src/IOTS.v
 src/IOCO.v
-src/src_graphviz.v
+src/TTS.v
+src/graphviz.v
 examples/syntax.v
 examples/semantics.v
 examples/trans_set.v
-examples/graphviz.v
+examples/graphviz_ex.v
 examples/LTS_ex.v
 examples/IOTS_ex.v
 examples/IOCO_ex.v

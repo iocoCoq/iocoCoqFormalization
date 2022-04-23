@@ -3,11 +3,14 @@ Require Import BE_ltacs.
 Require Import String.
 Require Import Coq.Lists.List.
 Import Coq.Lists.List.ListNotations.
+Require Import BE_syntax.
+Import BE_syntax.BehaviourExpressionsNotations.
 Require Import LTS.
 Require Import LTS_functions.
 Require Import IOTS.
 
 Local Open Scope string.
+
 Definition fig4_k3_LTS : LTS.
 Proof.
    solve_LTS_rules
@@ -42,7 +45,16 @@ Defined.
 Definition fig4_k3 : s_IOLTS :=
   create_s_IOLTS fig4_k3_IOLTS.
 
+Definition fig6_r_BE :=
+  "fig6_r" ::= "but";; "liq";; STOP [] "but";; "but";; "choc";; STOP.
+
+Definition fig6_r_ctx : BehaviourExpressions.
+Proof. create_behaviour_expressions [fig6_r_BE]. Defined.
+
 Definition fig6_r_LTS : LTS.
+Proof. create_LTS_from_BE fig6_r_ctx "fig6_r" 100. Defined.
+
+Definition fig6_r_LTS' : LTS.
 Proof.
   solve_LTS_rules
           [0;1;2;3;4;5]
@@ -74,7 +86,20 @@ Defined.
 Definition fig6_r : s_IOLTS :=
   create_s_IOLTS fig6_r_IOLTS.
 
+Definition i1 :=
+  "i1" ::= "b";; "i1" [] "a";; "i1_aux1".
+Definition i1_aux1 :=
+  "i1_aux1" ::= "a";; "i1_aux1" [] "b";; "i1_aux1"[] "x";; "i1_aux2".
+Definition i1_aux2 :=
+  "i1_aux2" ::= "a";; "i1_aux2" [] "b";; "i1_aux2".
+
+Definition i1_ctx : BehaviourExpressions.
+Proof. create_behaviour_expressions [i1; i1_aux1; i1_aux2]. Defined.
+
 Definition imp_i1_LTS : LTS.
+Proof. create_LTS_from_BE i1_ctx "i1" 100. Defined.
+
+Definition imp_i1_LTS' : LTS.
 Proof.
   solve_LTS_rules
           [1;2;3]
@@ -88,11 +113,13 @@ Definition imp_i1_SC_LTS : SC_LTS.
 Proof.
   apply (mkSC_LTS imp_i1_LTS).
   unfold strongly_converging. intros s t H. destruct t.
-  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
-  - unfold all_labels_tau in H. destruct H as [_ [H _]].
-    unfold not. intros H'. inversion H'.
-    + subst. proof_absurd_transition H5.
-    + subst. expand_transition H3.
+  - destruct H as [H _]. unfold not in H. exfalso. apply H. reflexivity.
+  - destruct H as [_ H]. unfold not. intros H'. simpl in H.
+    destruct H as [Eq H]. subst. inversion H'; subst.
+    + expand_transition H5; subst; inversion H0.
+    + expand_transition H3; subst; simpl in H; destruct H as [Eq H]; subst;
+      inversion H6 as [? ? ? ? H_Trans | ? ? ? ? ? ? ? H_Trans ?];
+      expand_transition H_Trans.
 Defined.
 
 Definition imp_i1_IOLTS : IOLTS.
@@ -106,51 +133,31 @@ Defined.
 Definition imp_i1 : IOTS.
 Proof.
   apply (mkIOTS imp_i1_IOLTS).
-  unfold valid_iots. exists [1;2;3]. split.
-  - apply der_LTS_r1. apply der_r1. simpl. exists []. split.
-    + apply seq_reachability_r1. apply empty_reachability_r1.
-    + exists ["a"]. split.
-      * apply seq_reachability_r2 with (si := 2).
-        -- apply one_step_reachability_r1 with (s1 := 1) (s2 := 2);
-           try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-        -- apply seq_reachability_r1. apply empty_reachability_r1.
-      * exists ["a"; "x"]. split.
-        -- apply seq_reachability_r2 with (si := 2).
-           ++ apply one_step_reachability_r1 with (s1 := 1) (s2 := 2);
-              try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-           ++ apply seq_reachability_r2 with (si := 3).
-              ** apply one_step_reachability_r1 with (s1 := 2) (s2 := 3);
-                 try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-              ** apply seq_reachability_r1. apply empty_reachability_r1.
-        -- apply I.
-  - simpl. repeat split.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 1) (s2 := 2);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 1) (s2 := 1);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 2) (s2 := 2);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 2) (s2 := 2);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 3) (s2 := 3);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
-    + eapply has_reachability_to_some_other_r1. eapply seq_reachability_r2.
-      * apply one_step_reachability_r1 with (s1 := 3) (s2 := 3);
-        try (apply empty_reachability_r1). apply transition_r1. elem_in_list.
-      * apply seq_reachability_r1. apply empty_reachability_r1.
+  unfold valid_iots. exists [0;1;2;3;4;5]. split.
+  - apply der_LTS_r1. apply der_r1. vm_compute q0. simpl. 
+    exists ["b"]. split; [proof_seq_reachability [(@nil nat, 0)] (@nil nat) |].
+    exists [ ]. split; [proof_seq_reachability (@nil nat) (@nil nat) |].
+    exists ["a"]. split; [proof_seq_reachability [(@nil nat, 2)] (@nil nat) |].
+    exists ["a"]. split; [proof_seq_reachability [(@nil nat, 2)] [3] |].
+    exists ["a"; "x"]. split; [proof_seq_reachability [(@nil nat, 2); ([3], 4)] (@nil nat) |].
+    exists ["a"; "x"]. split; [proof_seq_reachability [(@nil nat, 2); ([3], 4)] [5] |].
+    auto.
+ - vm_compute L_i. simpl. repeat split; eapply has_reachability_to_some_other_r1.
+   + proof_seq_reachability [([1], 2)] (@nil nat).
+   + proof_seq_reachability [([1], 0)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 0)] (@nil nat).
+   + proof_seq_reachability [([3], 2)] (@nil nat).
+   + proof_seq_reachability [([3], 2)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+   + proof_seq_reachability [([5], 4)] (@nil nat).
+   + proof_seq_reachability [([5], 4)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 4)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 4)] (@nil nat).
 Defined.
 
-Definition spec_s1_LTS : LTS.
+Definition spec_s1_LTS' : LTS.
 Proof.
   solve_LTS_rules
     [1;2;3]
@@ -159,15 +166,26 @@ Proof.
     1.
 Defined.
 
+Definition s1 :=
+  "s1" ::= "a";; "x";; STOP.
+
+Definition s1_ctx : BehaviourExpressions.
+Proof. create_behaviour_expressions [s1]. Defined.
+
+Definition spec_s1_LTS : LTS.
+Proof. create_LTS_from_BE s1_ctx "s1" 100. Defined.
+
 Definition spec_s1_SC_LTS : SC_LTS.
 Proof.
- apply (mkSC_LTS spec_s1_LTS).
- unfold strongly_converging. intros s t H. destruct t.
-  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
-  - unfold all_labels_tau in H. destruct H as [_ [H _]].
-    unfold not. intros H'. inversion H'.
-    + subst. proof_absurd_transition H5.
-    + subst. expand_transition H3.
+  apply (mkSC_LTS spec_s1_LTS).
+  unfold strongly_converging. intros s t H. destruct t.
+  - destruct H as [H _]. unfold not in H. exfalso. apply H. reflexivity.
+  - destruct H as [_ H]. unfold not. intros H'. simpl in H.
+    destruct H as [Eq H]. subst. inversion H'; subst.
+    + expand_transition H5; subst; inversion H0.
+    + expand_transition H3; subst; simpl in H; destruct H as [Eq H]; subst;
+      inversion H6 as [? ? ? ? H_Trans | ? ? ? ? ? ? ? H_Trans ?];
+      expand_transition H_Trans.
 Defined.
 
 Definition spec_s1_IOLTS : IOLTS.
@@ -178,62 +196,16 @@ Proof.
     ["x"].
 Defined.
 
-(*
+Definition s3 :=
+  "s3" ::= "a";; "x";; STOP [] "b";; "y";; STOP.
 
-Theorem i1_ioco_s1 : ind_ioco imp_i1 spec_s1_IOLTS.
-Proof.
-  unfold ind_ioco. simpl. intros Qi Qs t out_i out_s H.
-  unfold ind_s_traces_LTS in H. unfold ind_s_traces in H. destruct H as [s' H].
-  simpl in H. inversion H; subst.
-  - clear. intros H1 H2. unfold ind_s_after_LTS in H2. simpl in H2. unfold ind_s_after in H2.
-    intros H3 H4. unfold ind_out in H4. intros l H'.
-    assert (H'': forall s, In s Qs -> In l out_s).
-    { intros s H. remember H as H_new. clear HeqH_new. apply H2 in H.
-      inversion H. subst. inversion H0.
-      - subst. simpl in *. specialize (H4 l). destruct H4 as [_ H4].
-        apply H4 in H_new. destruct H_new as [so' [H_new1 H_new2]].
-        inversion H_new1; subst.
-        +
-    
-    }
-    apply H''.
+Definition s3_ctx : BehaviourExpressions.
+Proof. create_behaviour_expressions [s3]. Defined.
 
-
-
-
-
-  unfold ind_ioco. simpl. intros Qi Qs t out_i out_s H1 H2 H3 H4 H5.
-  unfold incl. intros l. intros H6. destruct l.
-  - admit.
-  - unfold ind_out in H4. specialize (H4 delta).
-    destruct H4 as [H4 _]. apply H4 in H6. clear H4. destruct H6 as [s [so' H6]].
-    destruct H6 as [H6_1 [H6_2 H6_3]]. inversion H6_2; subst.
-    + unfold ind_out in H5. specialize (H5 delta). destruct H5 as [_ H5].
-      unfold ind_s_after_LTS in H3. unfold ind_s_after in H3. simpl in H3.
-  unfold ind_out in H4. specialize (H4 l).
-  destruct H4 as [H4 _]. apply H4 in H6. clear H4. destruct H6 as [s [so' H6]].
-  destruct H6 as [H6_1 [H6_2 H6_3]]. inversion H6_2; subst.
-  - admit.
-  - simpl in H4. unfold ind_out in H5. specialize (H5 l). destruct H5 as [_ H5].
-    unfold ind_s_after_LTS in H3. unfold ind_s_after in H3. simpl in H3.
-  
-  
-  
-  
-  unfold ind_s_traces_LTS in H1.
-  unfold ind_s_traces in H1. destruct H1 as [s' H1].
-  simpl in H1. inversion H1; subst.
-  - unfold ind_s_after_LTS in H2. unfold ind_s_after in H2. simpl in H2.
-    unfold ind_s_after_LTS in H3. unfold ind_s_after in H3. simpl in H3.
-    unfold ind_out in H4. apply H4 in H6. destruct H6 as [s [so' H6]].
-    destruct H6 as [ [H6_1 [H6_2 H6_3]] _]. clear H4. inversion H6_2. 
-    + subst. simpl in H0.
-  unfold ind_s_after_LTS in H2. unfold ind_s_after in H2. specialize (H2 x).
-   unfold ind_s_after_LTS in H3. unfold ind_s_after in H3. specialize (H3 x).
-   apply H3 in H1. unfold ind_out in H5. specialize (H5 a). 
-   -
-*)
 Definition spec_s3_LTS : LTS.
+Proof. create_LTS_from_BE s3_ctx "s3" 100. Defined.
+
+Definition spec_s3_LTS' : LTS.
 Proof.
   solve_LTS_rules
     [1;2;3;4;5]

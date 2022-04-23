@@ -4,6 +4,9 @@ Import BE_syntax.BehaviourExpressionsNotations.
 Require Import BE_trans_set.
 Import Coq.Lists.List.ListNotations.
 Require Import BE_semantics.
+Require Import BE_trans_set.
+Require Import BE_trans_set_creator.
+Require Import BE_trans_set_converter.
 Require Import IOTS.
 Require Import LTS.
 (* -------------------- List_ltacs --------------------*)
@@ -52,6 +55,15 @@ Ltac solve_LTS_rules Q L T q0 := apply (mkLTS Q L T q0) ;
     end
   ) ; fail "One or more contextual rules were not fulfilled".
 
+Ltac create_LTS_from_BE ctx start i :=
+  let H := fresh "H" in
+  let t := fresh "t" in
+    destruct (createBehaviourTransSet ctx start i) as [t|] eqn:H;
+    [inversion H |
+     inversion H; fail "createBehaviourTransSet didn't generate valid trans set"];
+    apply createBehaviourTransSet_BehaviourTransSetR in H;
+    apply (createLtsFromBehaviourTransSet ctx t start H).
+
 Ltac proof_ind_init_fst_branch_loop ls H :=
 match ls with
 | ?h :: ?t  =>  inversion H as [A|A];
@@ -85,13 +97,27 @@ Ltac expand_transition _Ht :=
   let l := fresh "l" in
   let p := fresh "p" in
   let H := fresh "H" in
-    inversion _Ht as [ s s' l p H | s s' p H]; expand_In H.
+    inversion _Ht as [ s s' l p H | s s' p H]; vm_compute in H; expand_In H.
+
+Ltac expand_transition_seq _Hts :=
+  let s := fresh "s" in
+  let s' := fresh "s'" in
+  let si := fresh "si" in
+  let l1 := fresh "l1" in
+  let l2 := fresh "l2" in
+  let ll := fresh "ll" in
+  let p := fresh "p" in
+  let H1 := fresh "H1" in
+  let H2 := fresh "H2_seq" in
+   inversion _Hts as [s s' l1 p H1 | s s' si l1 l2 ll p H1 H2];
+   [subst; expand_transition H1 |
+    subst; expand_transition H1; subst; expand_transition_seq H2 ].
 
 Ltac expand_empty_reachability H :=
   let H1 := fresh "H'" in
   let H2 := fresh "H'" in
     inversion H as [ | ? ? ? ? H1 H2];
-    [| expand_transition H1; expand_empty_reachability H2]; subst.
+    [| subst; expand_transition H1; subst; expand_empty_reachability H2]; subst.
 
 Ltac expand_one_step_reachability H :=
   let H_empty1 := fresh "H_empty1" in
@@ -114,7 +140,7 @@ Ltac expand_s_seq_reachability H :=
         expand_one_step_reachability H_one_step;
         expand_s_seq_reachability H_seq; clear H_seq H_one_step
     | ind_s_seq_reachability _ (delta :: _) _ _ =>
-        inversion H as [| | ? ? ? ? H_Ts H_seq ]; expand_In H_Ts;
+        inversion H as [| | ? ? ? ? H_Ts H_seq ]; vm_compute in H_Ts; expand_In H_Ts;
         expand_s_seq_reachability H_seq; clear H_Ts H_one_step
     | ind_s_seq_reachability _ _ _ _ => idtac
     | _ => fail "Invalid Hypothesis format"
@@ -128,7 +154,9 @@ Ltac expand_out_one_state H x H_In_x_so :=
   let H1 := fresh "H1" in
   let H2 := fresh "H2" in
     inversion H as [? ? H_In_Ts | ? ? ? H_neq_In_Ts H_neq_In_so H_so];
-    [ expand_In H_In_Ts; clear H_In_Ts; subst; expand_In H_In_x_so |
+    [ vm_compute in H_In_Ts; expand_In H_In_Ts; clear H_In_Ts; subst;
+      expand_In H_In_x_so |
+      vm_compute in H_neq_In_Ts;
       (destruct H_neq_In_Ts; elem_in_list) +
       (destruct x; [ | destruct H_neq_In_so; apply H_In_x_so ];
        clear H_neq_In_Ts H_neq_In_so; subst;
@@ -163,34 +191,26 @@ Ltac proof_absurd_transition_seq _Hts :=
    inversion _Hts as [s s' l1 p H1 | s s' si l1 l2 ll p H1 H2];
    subst; expand_transition H1; subst; proof_absurd_transition_seq H2.
 
-(* ainda nao vi esses ltacs *)
+Ltac proof_empty_reachability path :=
+  match path with
+  | @nil nat => apply empty_reachability_r1
+  | ?x :: ?path' =>
+      apply empty_reachability_r2 with (si := x);
+      [ apply transition_r2; vm_compute; elem_in_list |
+        proof_empty_reachability path' ]
+  end.
 
-Ltac proof_absurd_different_hyp _Hd :=
-  (unfold not in _Hd; exfalso; apply _Hd; reflexivity) + (idtac).
-
-Ltac tr_not_in_list_hyp Hyp :=
-  let Hyp' := fresh "Hyp'" in
-    repeat(inversion Hyp as [Hyp'|Hyp']; [inversion Hyp'|]; clear Hyp; rename Hyp' into Hyp); inversion Hyp.
-
-Ltac core_transition _Ht3 _Ht4 _Ht5 _Ht6 := 
-  repeat(inversion _Ht4 as [_Aux|_Aux];
-    [(inversion _Aux; fail) + (subst); tr_not_in_list_hyp _Ht6 |];
-   clear _Ht4; rename _Aux into _Ht4); (inversion _Ht4; fail) + (idtac).
-
-Ltac proof_incl H :=
-  let aux := fresh "aux" in
-    repeat(inversion H as [aux|aux]; [inversion aux; fail |]; clear H; rename aux into Hs).
-
-Ltac proof_incl_goal :=
-  simpl; unfold incl; intros Hlabel Hincl; apply Hincl.
-
-Ltac loop_tactics ltac Hyp :=
-  let Hyp' := fresh "Hyp'" in
-    repeat(
-            inversion Hyp as [Hyp'|Hyp'];
-            [ subst; ltac |];
-            clear Hyp; rename Hyp' into Hyp);
-    inversion Hyp.
+Ltac proof_seq_reachability path last :=
+  lazymatch path with
+  | [ ] => apply seq_reachability_r1; proof_empty_reachability last
+  | (?empty, ?next) :: ?path' =>
+      apply seq_reachability_r2 with (si := next);
+      [ eapply one_step_reachability_r1;
+        [ proof_empty_reachability empty |
+          apply transition_r1; vm_compute; elem_in_list |
+          proof_empty_reachability (@nil nat) ] |
+        proof_seq_reachability path' last ]
+  end.
 
 (* -------------------- IOTS_ltacs --------------------*)
 
@@ -203,32 +223,7 @@ Ltac solve_IOLTS_rules lts Li Lu := apply (mkIOLTS lts Li Lu) ;
     end
   ) ; fail "One or more contextual rules were not fulfilled".
 
-Ltac all_delta_trans := intros s s' l A;
-    repeat(inversion A as [B|B];
-             [inversion B; split; [reflexivity | split; [reflexivity | elem_in_list]] | ];
-           clear A; rename B into A); inversion A.
-(*
-Ltac all_quiescent_trans_incl := intros B;
-    repeat(inversion B as [C|C];
-      [inversion C ;
-        split;
-        [elem_in_list
-        |apply quiescent_r1; intros s' l D; destruct D as [D E];
-         repeat(inversion D as [F|F];
-           [repeat(inversion E as [G|G];
-             [subst l;
-              subst s';
-              unfold not;
-              intro H';
-              inversion H' as [I J K L M];
-              destruct M as [N [O [P Q]]];
-              repeat(inversion Q as [R|R];
-               [inversion R |]; clear Q; rename R into Q); inversion Q
-             |]; clear E; rename G into E); inversion E
-           |]; clear D; rename F into D); inversion D
-        ]
-      |]; clear B; rename C into B); inversion B.
-*)
+
 (* -------------------- BE_ltacs --------------------*)
 
 Ltac create_behaviour_expressions expressions :=
