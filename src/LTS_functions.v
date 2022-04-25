@@ -23,16 +23,51 @@ Definition f_init (s : state) (p : LTS) : set transition_label :=
 
 Theorem ind_init_reflect :
   forall (s : state) (ll : set transition_label) (p : LTS),
-    ind_init s ll p <-> f_init s p = ll.
-Proof. Admitted.
+    ind_init s ll p <-> f_init s p [=] ll.
+Proof.
+  intros s ll p. unfold f_init. split.
+  - intros H. inversion H. subst. clear H. rename H0 into H.
+    unfold Equiv. split.
+    + intros H'. apply H. clear H. induction (T p); [ inversion H' |].
+      simpl in H'. destruct a, p0. destruct (s =? s2) eqn:Heq.
+      * apply Nat.eqb_eq in Heq. rewrite <- Heq in *.
+        apply set_add_iff in H'. destruct H' as [H' | H'].
+        -- rewrite H'. exists s1. left. reflexivity.
+        -- apply IHs0 in H'. destruct H' as [s' H']. exists s'. right. apply H'.
+      * apply IHs0 in H'. destruct H' as [s' H']. exists s'. right. apply H'.
+    + intros H'. apply H in H'. clear H. destruct H' as [s' H']. induction (T p).
+      * inversion H'.
+      * simpl in H'. destruct a, p0. destruct H' as [H' | H'].
+        -- inversion H'. subst. simpl. rewrite Nat.eqb_refl. apply set_add_iff.
+           left. reflexivity.
+        -- simpl. destruct (s =? s2); [ apply set_add_iff; right |]; auto.
+  - intros H. unfold Equiv in H. apply init_r1. intros l. split.
+    + intros H'. apply H in H'. clear H. induction (T p); [ inversion H' |].
+      simpl in H'. destruct a, p0. destruct (s =? s2) eqn:Heq.
+      * apply Nat.eqb_eq in Heq. rewrite <- Heq in *.
+        apply set_add_iff in H'. destruct H' as [H' | H'].
+        -- rewrite H'. exists s1. left. reflexivity.
+        -- apply IHs0 in H'. destruct H' as [s' H']. exists s'. right. apply H'.
+      * apply IHs0 in H'. destruct H' as [s' H']. exists s'. right. apply H'.
+    + intros H'. apply H. clear H. destruct H' as [s' H']. induction (T p).
+      * inversion H'.
+      * simpl in H'. destruct a, p0. destruct H' as [H' | H'].
+        -- inversion H'. subst. simpl. rewrite Nat.eqb_refl. apply set_add_iff.
+           left. reflexivity.
+        -- simpl. destruct (s =? s2); [ apply set_add_iff; right |]; auto.
+Qed.
 
 Definition f_init_LTS (p : LTS) : list transition_label :=
   f_init p.(q0) p.
 
 Theorem ind_init_LTS_reflect :
   forall (ll : set transition_label) (p : LTS),
-    ind_init_LTS ll p <-> f_init_LTS p = ll.
-Proof. Admitted.
+    ind_init_LTS ll p <-> f_init_LTS p [=] ll.
+Proof.
+  intros ll p. unfold f_init_LTS. split.
+  - intros H. inversion H. subst. apply ind_init_reflect; auto.
+  - intros H. apply init_LTS_r1. apply ind_init_reflect; auto.
+Qed.
 
 (* Definition 5.3 *)
 Local Open Scope bool_scope.
@@ -101,12 +136,11 @@ Definition f_after_LTS (ll : list label) (p : LTS) : set state :=
   f_after p.(q0) ll p.
 
 Theorem ind_after_reflect:
-  forall (s : state) (lt : list transition) (ll : list label)
-      (ls : list state) (p : LTS),
-    ind_after s ll ls p <-> (f_after s ll p) [=] ls.
+  forall (s : state) (ll : list label) (ls : list state) (p : LTS),
+    ind_after s ll ls p <-> f_after s ll p [=] ls.
 Proof. Admitted.
 
 Theorem ind_after_LTS_reflect:
-  forall (lt : list transition) (ll : list label) (ls : list state) (p : LTS),
-    ind_after_LTS ll ls p <-> (f_after_LTS ll p) [=] ls.
+  forall (ll : list label) (ls : list state) (p : LTS),
+    ind_after_LTS ll ls p <-> f_after_LTS ll p [=] ls.
 Proof. Admitted.

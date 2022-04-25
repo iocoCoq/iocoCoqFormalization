@@ -34,8 +34,10 @@ Ltac disjoint_sets :=
   repeat (apply Forall_cons; [ unfold not; intros H; expand_In H; fail |]);
   (apply Forall_nil + fail "Sets not disjoint").
 
-Ltac proof_Equiv := 
-  unfold list_helper.Equiv; intros x; split; intros H; expand_In H; elem_in_list.
+Ltac proof_Equiv :=
+  let H := fresh "H" in
+  let x := fresh "x" in
+    unfold list_helper.Equiv; intros x; split; intros H; expand_In H; elem_in_list.
 
 (* -------------------- LTS_ltacs --------------------*)
 
@@ -127,6 +129,21 @@ Ltac expand_one_step_reachability H :=
     expand_empty_reachability H_empty1; expand_transition H_trans;
     expand_empty_reachability H_empty2; clear H_empty1 H_trans H_empty2.
 
+Ltac expand_seq_reachability H :=
+  let H_empty := fresh "H_empty" in
+  let H_one_step := fresh "H_one_step" in
+  let H_seq := fresh "H_seq" in
+    lazymatch type of H with
+    | ind_seq_reachability _ [ ] _ _ =>
+        inversion H as [ ? ? ? H_empty |]; expand_empty_reachability H_empty
+    | ind_seq_reachability _ (_ :: _) _ _ =>
+        inversion H as [| ? ? ? ? ? ? H_one_step H_seq];
+        expand_one_step_reachability H_one_step;
+        expand_seq_reachability H_seq; clear H H_one_step; rename H_seq into H
+    | ind_seq_reachability _ _ _ _ => idtac
+    | _ => fail "Invalid Hypothesis format"
+    end.
+
 Ltac expand_s_seq_reachability H :=
   let H_empty := fresh "H_empty" in
   let H_one_step := fresh "H_one_step" in
@@ -164,7 +181,6 @@ Ltac expand_out_one_state H x H_In_x_so :=
        expand_In H1; subst; expand_transition H2; subst; clear H1 H2)
     ].
 
-
 Ltac proof_absurd_transition H :=
   expand_transition H; fail "Unable to proof invalid transition".
 
@@ -192,8 +208,8 @@ Ltac proof_absurd_transition_seq _Hts :=
    subst; expand_transition H1; subst; proof_absurd_transition_seq H2.
 
 Ltac proof_empty_reachability path :=
-  match path with
-  | @nil nat => apply empty_reachability_r1
+  lazymatch path with
+  | [ ] => apply empty_reachability_r1
   | ?x :: ?path' =>
       apply empty_reachability_r2 with (si := x);
       [ apply transition_r2; vm_compute; elem_in_list |
@@ -205,7 +221,7 @@ Ltac proof_seq_reachability path last :=
   | [ ] => apply seq_reachability_r1; proof_empty_reachability last
   | (?empty, ?next) :: ?path' =>
       apply seq_reachability_r2 with (si := next);
-      [ eapply one_step_reachability_r1;
+      [ eapply one_step_reachability_r1 with (s2 := next);
         [ proof_empty_reachability empty |
           apply transition_r1; vm_compute; elem_in_list |
           proof_empty_reachability (@nil nat) ] |

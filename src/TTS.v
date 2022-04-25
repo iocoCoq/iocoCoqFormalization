@@ -18,18 +18,18 @@ Section SectionTTS.
     ; fail_is_valid : In fail_state iots.(embedded_iolts).(sc_lts).(lts).(Q)
     ; pass_is_valid : In pass_state iots.(embedded_iolts).(sc_lts).(lts).(Q)
     ; theta_is_valid : In theta iots.(embedded_iolts).(L_u)
-    ; TTS_Li := iots.(embedded_iolts).(L_u)
-    ; TTS_Lu := set_remove string_dec theta iots.(embedded_iolts).(L_i)
+    ; imp_Li := set_remove string_dec theta iots.(embedded_iolts).(L_u)
+    ; imp_Lu := iots.(embedded_iolts).(L_i)
     ; is_deterministic : ind_deterministic iots.(embedded_iolts).(sc_lts).(lts)
     ; pass_fail_diff : pass_state <> fail_state
     ; pass_cycle :
         forall (l : label) (s : state),
           ind_transition pass_state (event l) s iots.(embedded_iolts).(sc_lts).(lts) ->
-          s = pass_state /\ (l = theta \/ In l TTS_Lu)
+          s = pass_state /\ (l = theta \/ In l imp_Lu)
     ; fail_cycle :
         forall (l : label) (s : state),
           ind_transition fail_state (event l) s iots.(embedded_iolts).(sc_lts).(lts) ->
-          s = fail_state /\ (l = theta \/ In l TTS_Lu)
+          s = fail_state /\ (l = theta \/ In l imp_Lu)
     ; no_other_cycles :
         forall (t : list label) (s : state),
           t <> [] ->
@@ -39,11 +39,11 @@ Section SectionTTS.
         forall (q : state),
           In q iots.(embedded_iolts).(sc_lts).(lts).(Q) ->
           f_init q iots.(embedded_iolts).(sc_lts).(lts) [=]
-            map event (theta :: TTS_Lu) \/
+            map event (theta :: imp_Lu) \/
           exists (a : label),
-            In a TTS_Li /\
+            In a imp_Li /\
             f_init q iots.(embedded_iolts).(sc_lts).(lts) [=]
-                 map event (a :: TTS_Lu)
+                 map event (a :: imp_Lu)
   }.
 
 End SectionTTS.
@@ -56,19 +56,20 @@ Inductive ind_test_execution_transition :
       ind_test_execution_transition t i tau t i' test imp
   | test_execution_transition_r2 (t i t' i' : state) (a : label) (test : TTS)
         (imp : IOTS) :
-      In a (test.(TTS_Li) ++ test.(TTS_Lu)) ->
+      In a (test.(imp_Li) ++ test.(imp_Lu)) ->
       ind_transition t (event a) t' test.(iots).(embedded_iolts).(sc_lts).(lts) ->
       ind_transition i (event a) i' imp.(embedded_iolts).(sc_lts).(lts) ->
       ind_test_execution_transition t i (event a) t' i' test imp
-  | test_execution_transition_r3 (t i t' : state) (a : label) (test : TTS)
+  | test_execution_transition_r3 (t i t' : state) (theta_l : label) (test : TTS)
         (imp : IOTS) :
+      theta_l = test.(theta) ->
       ind_transition
         t
         (event test.(theta))
         t'
         test.(iots).(embedded_iolts).(sc_lts).(lts) ->
       In i (create_s_IOLTS imp.(embedded_iolts)).(Ts) ->
-      ind_test_execution_transition t i (event test.(theta)) t' i test imp.
+      ind_test_execution_transition t i (event theta_l) t' i test imp.
 
 (* Definition 16.2 *)
 Inductive ind_test_execution_empty_reachability :
@@ -100,7 +101,7 @@ Inductive ind_test_execution_seq_reachability :
       ind_test_execution_seq_reachability t2 i2 ll t3 i3 test imp ->
       ind_test_execution_seq_reachability t1 i1 (l :: ll) t3 i3 test imp.
 
-Definition ind_test_trace (ll : list label) (final_t final_i : state)
+Definition ind_test_execution_trace (ll : list label) (final_t final_i : state)
     (test : TTS) (imp : IOTS) : Prop :=
   ind_test_execution_seq_reachability
     test.(iots).(embedded_iolts).(sc_lts).(lts).(q0)
@@ -111,25 +112,25 @@ Definition ind_test_trace (ll : list label) (final_t final_i : state)
     test
     imp.
 
-Definition ind_test_run (ll : list label) (test : TTS) (imp : IOTS) : Prop :=
+Definition ind_test_run (sigma : list label) (test : TTS) (imp : IOTS) : Prop :=
   exists (i' : state),
-    ind_test_trace ll test.(pass_state) i' test imp \/
-    ind_test_trace ll test.(fail_state) i' test imp.
+    ind_test_execution_trace sigma test.(pass_state) i' test imp \/
+    ind_test_execution_trace sigma test.(fail_state) i' test imp.
 
 (* Definition 16.3 *)
-Definition ind_passes (test : TTS) (imp : IOTS) : Prop :=
+Definition ind_passes (imp : IOTS) (test : TTS) : Prop :=
   forall (ll : list label) (i' : state),
     ind_test_run ll test imp ->
-    ~ ind_test_trace ll test.(fail_state) i' test imp.
+    ~ ind_test_execution_trace ll test.(fail_state) i' test imp.
 
 (* Definition 16.4 *)
-Inductive ind_passes_set : set TTS -> IOTS -> Prop :=
+Inductive ind_passes_set : IOTS -> set TTS -> Prop :=
   | passes_set_r1 (imp : IOTS) :
-      ind_passes_set [] imp
+      ind_passes_set imp []
   | passes_set_r2 (test : TTS) (tests : set TTS) (imp : IOTS) :
-      ind_passes test imp ->
-      ind_passes_set tests imp ->
-      ind_passes_set (test :: tests) imp.
+      ind_passes imp test ->
+      ind_passes_set imp tests ->
+      ind_passes_set imp (test :: tests).
 
-Definition ind_fails_set (tests : set TTS) (imp : IOTS) : Prop :=
-  exists (test : TTS), In test tests /\ ~ ind_passes test imp.
+Definition ind_fails_set (imp : IOTS) (tests : set TTS) : Prop :=
+  exists (test : TTS), In test tests /\ ~ ind_passes imp test.

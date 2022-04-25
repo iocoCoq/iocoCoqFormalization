@@ -270,12 +270,6 @@ Definition f_after_single_state_IOLTS (s : state) (ll : list s_label)
 Definition f_after_IOLTS (ll : list s_label) (p : s_IOLTS) : set state := 
   f_after_single_state_IOLTS p.(iolts).(sc_lts).(lts).(q0) ll p.
 
-(* Lemma lala :
-  forall (s s' : state) (T : list transition),
-    ind_empty_reachability s s' T ->
-    In s' (all_reachable_by_tau [s] T).*)
-
-
 Lemma ind_after_IOLTS_equiv_f_after_IOLTS:
   forall (ll : list s_label) (ls : set state) (p : s_IOLTS),
     ind_s_after_IOLTS ll ls p <-> ls [=] f_after_IOLTS ll p.

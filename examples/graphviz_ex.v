@@ -1,7 +1,7 @@
 Require Import IOTS_ex.
 Require Import LTS_ex.
 Require Import semantics.
-Require Import src_graphviz.
+Require Import graphviz.
 Require Import String.
 
 Local Open Scope string_scope.

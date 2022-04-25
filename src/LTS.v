@@ -169,29 +169,27 @@ Inductive ind_refuses : set state -> set transition_label -> LTS -> Prop :=
       ind_refuses ls ll p.
 
 (* Definition 5.6 *)
-Fixpoint exists_seq_to_reach_every_elem (s : state) (ls : set state) (p : LTS) : Prop :=
-  match ls with
-  | []      =>  True
-  | h :: t  =>  exists (ll : list label), 
-                    ind_seq_reachability s ll h p /\ 
-                    exists_seq_to_reach_every_elem s t p
-  end.
-
 Inductive ind_der : state -> set state -> LTS -> Prop :=
-  | der_r1 (s : state) (ls : set state) (p : LTS) :
-     exists_seq_to_reach_every_elem s ls p ->
-     ind_der s ls p.
+  | der_r1 (s: state) (ls : set state) (p : LTS) :
+      (forall (s' : state),
+        (exists (ll : list label), ind_seq_reachability s ll s' p) <-> In s' ls) ->
+      ind_der s ls p.
 
 Inductive ind_der_LTS : set state -> LTS -> Prop :=
   | der_LTS_r1 (ls : set state) (p : LTS) :
-                     ind_der p.(q0) ls p -> ind_der_LTS ls p.
+      ind_der p.(q0) ls p ->
+      ind_der_LTS ls p.
 
 (* Definition 5.7 *)
 Definition has_finite_behaviour (s : state) (lts : LTS) : Prop :=
-  exists (n : nat), forall (t : list label), ind_traces s t lts -> length t <= n.
+  exists (n : nat),
+    forall (t : list label),
+      ind_traces s t lts -> length t <= n.
 
 Definition has_finite_behaviour_LTS (lts : LTS) : Prop :=
-  exists (n : nat), forall (t : list label), ind_traces lts.(q0) t lts -> length t <= n.
+  exists (n : nat),
+    forall (t : list label),
+      ind_traces lts.(q0) t lts -> length t <= n.
 
 (* Definition 5.8 *)
 Definition finite_state (p : state) (lts : LTS) : Prop :=
@@ -209,6 +207,7 @@ Definition ind_deterministic (lts : LTS) : Prop :=
   forall (t : list label) (ls : set state),
     ind_traces_LTS t lts ->
     ind_after_LTS t ls lts ->
+    NoDup ls ->
     length ls = 1.
 
 (* Definição 5.10 *)

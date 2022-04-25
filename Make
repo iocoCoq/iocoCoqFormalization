@@ -19,3 +19,4 @@ examples/graphviz_ex.v
 examples/LTS_ex.v
 examples/IOTS_ex.v
 examples/IOCO_ex.v
+examples/TTS_ex.v

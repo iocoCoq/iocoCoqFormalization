@@ -11,6 +11,54 @@ Require Import IOTS.
 
 Local Open Scope string.
 
+Definition fig4_k1_LTS : LTS.
+Proof.
+   solve_LTS_rules
+          [0;1;2]
+          ["but"; "liq";"choc"]
+          [(0, event "but",1); (1, event "but", 1); (1, event "liq", 2);
+           (2, event "but",2)]
+          0.
+Defined.
+
+Definition fig4_k1_SC_LTS : SC_LTS.
+Proof.
+  apply (mkSC_LTS fig4_k1_LTS).
+  unfold strongly_converging. intros s t H. destruct t.
+  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
+  - unfold all_labels_tau in H. destruct H as [_ [H _]].
+    unfold not. intros H'. inversion H'.
+    + subst. proof_absurd_transition H5.
+    + subst. expand_transition H3.
+Defined.
+
+Definition fig4_k1_IOLTS : IOLTS.
+Proof.
+  solve_IOLTS_rules
+    fig4_k1_SC_LTS
+    ["but"]
+    ["liq";"choc"].
+Defined.
+
+Definition fig4_k1_IOTS : IOTS.
+Proof.
+  apply (mkIOTS fig4_k1_IOLTS).
+  unfold valid_iots. exists [0;1;2]. split.
+  - apply der_LTS_r1. apply der_r1. intros s'. simpl q0. split.
+    + intros H. destruct H as [ll H].
+      repeat (induction ll; expand_seq_reachability H; try elem_in_list; auto;
+      clear IHll).
+    + intros H. expand_In H.
+      * exists [ ]. proof_seq_reachability (@nil nat) (@nil nat).
+      * exists ["but"]. proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+      * exists ["but"; "liq"].
+        proof_seq_reachability [(@nil nat, 1); (@nil nat, 2)] (@nil nat).
+  - simpl. repeat split; eapply has_reachability_to_some_other_r1.
+   + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+Defined.
+
 Definition fig4_k3_LTS : LTS.
 Proof.
    solve_LTS_rules
@@ -40,6 +88,34 @@ Proof.
     fig4_k3_SC_LTS
     ["but"]
     ["liq";"choc"].
+Defined.
+
+Definition fig4_k3_IOTS : IOTS.
+Proof.
+  apply (mkIOTS fig4_k3_IOLTS).
+  unfold valid_iots. exists [0;1;2;3;4;5]. split.
+  - apply der_LTS_r1. apply der_r1. intros s'. simpl q0. split.
+    + intros H. destruct H as [ll H].
+      repeat(
+        induction ll; expand_seq_reachability H; try elem_in_list; auto;
+        clear IHll).
+    + intros H. expand_In H.
+      * exists [ ]. proof_seq_reachability (@nil nat) (@nil nat).
+      * exists ["but"]. proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+      * exists ["but"]. proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+      * exists ["but"; "liq"].
+        proof_seq_reachability [(@nil nat, 1); (@nil nat, 3)] (@nil nat).
+      * exists ["but"; "but"].
+        proof_seq_reachability [(@nil nat, 2); (@nil nat, 4)] (@nil nat).
+      * exists ["but"; "but"; "choc"].
+        proof_seq_reachability [(@nil nat, 2); (@nil nat, 4); (@nil nat, 5)] (@nil nat).
+  - simpl. repeat split; eapply has_reachability_to_some_other_r1.
+   + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 4)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 3)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 4)] (@nil nat).
+   + proof_seq_reachability [(@nil nat, 5)] (@nil nat).
 Defined.
 
 Definition fig4_k3 : s_IOLTS :=
@@ -134,14 +210,110 @@ Definition imp_i1 : IOTS.
 Proof.
   apply (mkIOTS imp_i1_IOLTS).
   unfold valid_iots. exists [0;1;2;3;4;5]. split.
-  - apply der_LTS_r1. apply der_r1. vm_compute q0. simpl. 
-    exists ["b"]. split; [proof_seq_reachability [(@nil nat, 0)] (@nil nat) |].
-    exists [ ]. split; [proof_seq_reachability (@nil nat) (@nil nat) |].
-    exists ["a"]. split; [proof_seq_reachability [(@nil nat, 2)] (@nil nat) |].
-    exists ["a"]. split; [proof_seq_reachability [(@nil nat, 2)] [3] |].
-    exists ["a"; "x"]. split; [proof_seq_reachability [(@nil nat, 2); ([3], 4)] (@nil nat) |].
-    exists ["a"; "x"]. split; [proof_seq_reachability [(@nil nat, 2); ([3], 4)] [5] |].
-    auto.
+  - apply der_LTS_r1. apply der_r1. intros s'. split.
+    + intros H. destruct H as [ll H]. vm_compute q0 in H.
+      assert(H4 : forall ll,
+        ind_seq_reachability 4 ll s' (lts (sc_lts imp_i1_IOLTS)) ->
+        s' = 4 \/ ind_seq_reachability 5 ll s' (lts (sc_lts imp_i1_IOLTS))).
+      { intros ll' H'. destruct ll'; expand_seq_reachability H'; auto; right.
+        - apply seq_reachability_r1; auto.
+        - apply seq_reachability_r2 with (si := 4); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 5); auto.
+          eapply one_step_reachability_r1 with (s2 := 4);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 5); auto.
+        - apply seq_reachability_r2 with (si := 4); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 5); auto.
+          eapply one_step_reachability_r1 with (s2 := 4);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 5); auto. }
+      assert (H5 : forall ll,
+        ind_seq_reachability 5 ll s' (lts (sc_lts imp_i1_IOLTS)) ->
+        In s' [0; 1; 2; 3; 4; 5]).
+      { intros ll' H'. induction ll'; expand_seq_reachability H';
+        try elem_in_list; auto; apply H4 in H'; destruct H'; auto;
+        subst; elem_in_list. }
+      assert(H2: forall ll,
+        ind_seq_reachability 2 ll s' (lts (sc_lts imp_i1_IOLTS)) -> 
+        s' = 2 \/ ind_seq_reachability 3 ll s' (lts (sc_lts imp_i1_IOLTS))).
+      { intros ll' H'. destruct ll'; expand_seq_reachability H'; auto; right.
+        - apply seq_reachability_r1; auto.
+        - apply seq_reachability_r2 with (si := 4); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 5); auto.
+          eapply one_step_reachability_r1 with (s2 := 4);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 5); auto.
+        - apply seq_reachability_r2 with (si := 2); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 3); auto.
+          eapply one_step_reachability_r1 with (s2 := 2);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 3); auto.
+        - apply seq_reachability_r2 with (si := 2); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 3); auto.
+          eapply one_step_reachability_r1 with (s2 := 2);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 3); auto. }
+     assert (H3 : forall ll,
+       ind_seq_reachability 3 ll s' (lts (sc_lts imp_i1_IOLTS)) ->
+       In s' [0; 1; 2; 3; 4; 5]).
+     { intros ll' H'. induction ll'; expand_seq_reachability H';
+        try elem_in_list; auto.
+        - apply H4 in H'. destruct H' as [H' | H']; subst;
+          try elem_in_list. apply H5 in H'. apply H'.
+        - apply H5 in H'. apply H'.
+        - apply H2 in H'. destruct H' as [H' | H']; subst;
+          try elem_in_list. auto.
+        - apply H2 in H'. destruct H' as [H' | H']; subst;
+          try elem_in_list. auto. }
+     assert(H0: forall ll,
+        ind_seq_reachability 0 ll s' (lts (sc_lts imp_i1_IOLTS)) -> 
+        s' = 0 \/ ind_seq_reachability 1 ll s' (lts (sc_lts imp_i1_IOLTS))).
+      { intros ll' H'. destruct ll'; expand_seq_reachability H'; auto; right.
+        - apply seq_reachability_r1; auto.
+        - apply seq_reachability_r2 with (si := 2); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 3); auto.
+          eapply one_step_reachability_r1 with (s2 := 2);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 3); auto.
+        - apply seq_reachability_r2 with (si := 0); auto.
+          eapply one_step_reachability_r1; try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+        - apply seq_reachability_r2 with (si := 1); auto.
+          eapply one_step_reachability_r1 with (s2 := 0);
+          try apply empty_reachability_r1.
+          apply transition_r1. vm_compute T. elem_in_list.
+          apply empty_reachability_r2 with (si := 1); auto. }
+      induction ll; expand_seq_reachability H; try elem_in_list; auto.
+      * apply H2 in H. destruct H as [H | H]; subst; try elem_in_list.
+        apply H3 in H. apply H.
+      * apply H3 in H. apply H.
+      * apply H0 in H. destruct H as [H | H]; subst; try elem_in_list.
+        auto.
+    + intros H. expand_In H.
+      * exists ["b"]. proof_seq_reachability [(@nil nat, 0)] (@nil nat).
+      * exists [ ]. proof_seq_reachability (@nil nat) (@nil nat).
+      * exists ["a"]. proof_seq_reachability [(@nil nat, 2)] (@nil nat).
+      * exists ["a"]. proof_seq_reachability [(@nil nat, 2)] [3].
+      * exists ["a"; "x"]. proof_seq_reachability [(@nil nat, 2); ([3], 4)] (@nil nat).
+      * exists ["a"; "x"]. proof_seq_reachability [(@nil nat, 2); ([3], 4)] [5].
  - vm_compute L_i. simpl. repeat split; eapply has_reachability_to_some_other_r1.
    + proof_seq_reachability [([1], 2)] (@nil nat).
    + proof_seq_reachability [([1], 0)] (@nil nat).
