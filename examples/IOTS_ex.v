@@ -8,29 +8,16 @@ Import BE_syntax.BehaviourExpressionsNotations.
 Require Import LTS.
 Require Import LTS_functions.
 Require Import IOTS.
+Require Import LTS_ex.
 
 Local Open Scope string.
 
-Definition fig4_k1_LTS : LTS.
+Definition fig2_r_IOLTS : IOLTS.
 Proof.
-   solve_LTS_rules
-          [0;1;2]
-          ["but"; "liq";"choc"]
-          [(0, event "but",1); (1, event "but", 1); (1, event "liq", 2);
-           (2, event "but",2)]
-          0.
+  solve_IOLTS_rules fig2_r_SC_LTS ["but"] ["liq"; "choc"].
 Defined.
 
-Definition fig4_k1_SC_LTS : SC_LTS.
-Proof.
-  apply (mkSC_LTS fig4_k1_LTS).
-  unfold strongly_converging. intros s t H. destruct t.
-  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
-  - unfold all_labels_tau in H. destruct H as [_ [H _]].
-    unfold not. intros H'. inversion H'.
-    + subst. proof_absurd_transition H5.
-    + subst. expand_transition H3.
-Defined.
+Definition fig6_r : s_IOLTS := create_s_IOLTS fig2_r_IOLTS.
 
 Definition fig4_k1_IOLTS : IOLTS.
 Proof.
@@ -57,29 +44,6 @@ Proof.
    + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
    + proof_seq_reachability [(@nil nat, 1)] (@nil nat).
    + proof_seq_reachability [(@nil nat, 2)] (@nil nat).
-Defined.
-
-Definition fig4_k3_LTS : LTS.
-Proof.
-   solve_LTS_rules
-          [0;1;2;3;4;5]
-          ["but"; "liq";"choc"]
-          [(0, event "but",1);(1, event "liq",3);
-            (0, event "but",2);(2, event "but",4);(4, event "choc",5);
-            (1, event "but", 1); (3, event "but", 3); (4, event "but", 4);
-            (5, event "but", 5)]
-          0.
-Defined.
-
-Definition fig4_k3_SC_LTS : SC_LTS.
-Proof.
-  apply (mkSC_LTS fig4_k3_LTS).
-  unfold strongly_converging. intros s t H. destruct t.
-  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
-  - unfold all_labels_tau in H. destruct H as [_ [H _]].
-    unfold not. intros H'. inversion H'.
-    + subst. proof_absurd_transition H5.
-    + subst. expand_transition H3.
 Defined.
 
 Definition fig4_k3_IOLTS : IOLTS.
@@ -120,47 +84,6 @@ Defined.
 
 Definition fig4_k3 : s_IOLTS :=
   create_s_IOLTS fig4_k3_IOLTS.
-
-Definition fig6_r_BE :=
-  "fig6_r" ::= "but";; "liq";; STOP [] "but";; "but";; "choc";; STOP.
-
-Definition fig6_r_ctx : BehaviourExpressions.
-Proof. create_behaviour_expressions [fig6_r_BE]. Defined.
-
-Definition fig6_r_LTS : LTS.
-Proof. create_LTS_from_BE fig6_r_ctx "fig6_r" 100. Defined.
-
-Definition fig6_r_LTS' : LTS.
-Proof.
-  solve_LTS_rules
-          [0;1;2;3;4;5]
-          ["but";"liq";"choc"]
-          [(0, event "but",1);(1, event "liq",3);
-            (0, event "but",2);(2, event "but",4);(4, event "choc",5)]
-          0.
-Defined.
-
-Definition fig6_r_SC_LTS : SC_LTS.
-Proof.
-  apply (mkSC_LTS fig6_r_LTS).
-  unfold strongly_converging. intros s t H. destruct t.
-  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
-  - unfold all_labels_tau in H. destruct H as [_ [H _]].
-    unfold not. intros H'. inversion H'.
-    + subst. proof_absurd_transition H5.
-    + subst. expand_transition H3.
-Defined.
-
-Definition fig6_r_IOLTS : IOLTS.
-Proof.
-  solve_IOLTS_rules
-    fig6_r_SC_LTS
-    ["but"]
-    ["liq";"choc"].
-Defined.
-
-Definition fig6_r : s_IOLTS :=
-  create_s_IOLTS fig6_r_IOLTS.
 
 Definition i1 :=
   "i1" ::= "b";; "i1" [] "a";; "i1_aux1".

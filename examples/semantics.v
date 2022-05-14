@@ -49,6 +49,10 @@ Proof.
   - apply example2.
 Qed.
 
+Definition VEND_MACHINE :=
+  "VEND_MACHINE" ::=
+    "but";; ("choc";; STOP [] "bisc";; STOP [] "soda";; ("diet";; STOP [] "reg";; STOP)).
+
 Definition USER :=
   "USER" ::=
     "coffee";;("decaf";; "ready";; "drink";; "USER" []  "trad";; "ready";; "drink";; "USER")
@@ -67,4 +71,9 @@ Definition SYSTEM :=
 Definition vending_machine_ctx: BehaviourExpressions.
 Proof.
   create_behaviour_expressions [USER; MACHINE; SYSTEM].
+Defined.
+
+Definition vend_machine_ctx: BehaviourExpressions.
+Proof.
+  create_behaviour_expressions [VEND_MACHINE].
 Defined.

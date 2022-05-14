@@ -9,6 +9,9 @@ Require Import BE_trans_set_creator.
 Require Import BE_trans_set_converter.
 Require Import IOTS.
 Require Import LTS.
+Require Import TTS.
+Require Import LTS_functions.
+Require Import list_helper.
 (* -------------------- List_ltacs --------------------*)
 
 Ltac elem_in_list :=
@@ -93,33 +96,21 @@ Ltac proof_ind_init ls :=
   [proof_ind_init_fst_branch ls
   |proof_ind_init_snd_branch  ].
 
-Ltac expand_transition _Ht :=
-  let s := fresh "s" in
-  let s' := fresh "s'" in
-  let l := fresh "l" in
-  let p := fresh "p" in
+Ltac expand_transition Ht :=
   let H := fresh "H" in
-    inversion _Ht as [ s s' l p H | s s' p H]; vm_compute in H; expand_In H.
+    inversion Ht as [ ? ? ? ? H | ? ? ? H]; vm_compute in H; expand_In H.
 
 Ltac expand_transition_seq _Hts :=
-  let s := fresh "s" in
-  let s' := fresh "s'" in
-  let si := fresh "si" in
-  let l1 := fresh "l1" in
-  let l2 := fresh "l2" in
-  let ll := fresh "ll" in
-  let p := fresh "p" in
   let H1 := fresh "H1" in
-  let H2 := fresh "H2_seq" in
-   inversion _Hts as [s s' l1 p H1 | s s' si l1 l2 ll p H1 H2];
-   [subst; expand_transition H1 |
-    subst; expand_transition H1; subst; expand_transition_seq H2 ].
+  let H2_seq := fresh "H2_seq" in
+   inversion _Hts as [? ? ? ? H1 | ? ? ? ? ? ? ? H1 H2_seq];
+   subst; expand_transition H1; try (subst; expand_transition_seq H2_seq); subst.
 
 Ltac expand_empty_reachability H :=
   let H1 := fresh "H'" in
   let H2 := fresh "H'" in
     inversion H as [ | ? ? ? ? H1 H2];
-    [| subst; expand_transition H1; subst; expand_empty_reachability H2]; subst.
+    try (subst; expand_transition H1; subst; expand_empty_reachability H2); subst.
 
 Ltac expand_one_step_reachability H :=
   let H_empty1 := fresh "H_empty1" in
@@ -184,15 +175,8 @@ Ltac expand_out_one_state H x H_In_x_so :=
 Ltac proof_absurd_transition H :=
   expand_transition H; fail "Unable to proof invalid transition".
 
-Ltac proof_absurd_empty_reachability _Haer :=
-  let s := fresh "s" in
-  let si := fresh "si" in
-  let s' := fresh "s'" in
-  let p := fresh "p" in
-  let H1 := fresh "H1" in
-  let H2 := fresh "H2" in
-    inversion _Haer as [| s si s' p H1 H2]; expand_transition H1;
-    subst; proof_absurd_empty_reachability H2.
+Ltac proof_absurd_empty_reachability Haer :=
+  expand_empty_reachability Haer; fail "Unable to proof invalid empty reachability".
 
 Ltac proof_absurd_transition_seq _Hts :=
   let s := fresh "s" in
@@ -415,3 +399,111 @@ Ltac behaviour_trans_set_valid :=
     (apply behaviour_trans_inductive_rule;
      [ transations_correct_and_complete | simpl ]);
   apply behaviour_trans_empty_rule.
+
+(* --------------------- TTS_ltacs --------------------*)
+
+(* Ltac try_all list f :=
+  lazymatch list with
+  | [ ] => idtac
+  | ?h :: ?t => f h + try_all t f
+  end. *)
+
+Ltac create_TTS iots pass_state fail_state theta imp_Li :=
+  let H := fresh "H" in
+  let H' := fresh "H'" in
+  let H'' := fresh "H''" in
+  let H_aux := fresh "H_aux" in
+  let IHt := fresh "IHt" in
+  let s := fresh "s" in
+  let s' := fresh "s'" in
+  let t := fresh "t" in
+  let t' := fresh "t'" in
+    apply (mkTTS iots pass_state fail_state theta); try elem_in_list; auto;
+    try (intros l s H; expand_transition H; subst; simpl; split; auto);
+    [
+      unfold ind_deterministic; intros t ls H; inversion H as [? ? H_aux]; subst;
+      clear H; rename H_aux into H;
+      inversion H as [? ? ? H_aux]; subst; clear H; rename H_aux into H;
+      simpl in H; inversion H as [? ? ? ? H_aux]; subst; clear H; rename H_aux into H;
+      intros H' H''; inversion H' as [? ? ? H_aux]; subst; simpl in H_aux;
+      clear H'; rename H_aux into H';
+      apply ind_after_reflect in H';  unfold f_after in H';
+      symmetry_eqv in H';
+      repeat (induction t as [| ? t IHt]; expand_seq_reachability H; auto;
+        simpl f_after' in H';
+        try (apply Equiv_eqLength in H'; auto; apply NoDup_cons; auto;
+             apply NoDup_nil); clear IHt)
+    |
+      intros t; destruct t; intros s H H'; [destruct H; reflexivity |];
+      simpl in H';
+        assert (H_fail:
+          forall s t,
+            ind_seq_reachability fail_state t s iots.(embedded_iolts).(sc_lts).(lts) ->
+            s = fail_state);
+        [ intros s' t' H''; induction t'; expand_seq_reachability H''; auto |];
+        assert (H_pass:
+          forall s t,
+            ind_seq_reachability pass_state t s iots.(embedded_iolts).(sc_lts).(lts) ->
+            s = pass_state);
+        [ intros s' t' H''; induction t'; expand_seq_reachability H''; auto |];
+        expand_seq_reachability H'; auto;
+        repeat (destruct t as [| ? t];
+          try (
+           inversion H' as [ ? ? ? H_empty |];
+           inversion H_empty as [ | ? ? ? ? H_trans ?];
+           subst; expand_transition H_trans; fail);
+          expand_seq_reachability H';
+          try (apply H_pass in H'; inversion H');
+          try (apply H_fail in H'; inversion H'))
+    |
+      intros q H; simpl; expand_In H; vm_compute f_init;
+      try (left; proof_Equiv); right;
+      try_all (imp_Li) ltac:(fun x => (exists x; split; auto; proof_Equiv)) ].
+
+Ltac expand_test_execution_transition H :=
+  let H_trans := fresh "H_trans" in
+  let H_trans' := fresh "H_trans'" in
+  let H_In := fresh "H_In" in
+  let H_eq := fresh "H_eq" in
+    lazymatch type of H with
+    | ind_test_execution_transition _ _ tau _ _ _ _ =>
+        inversion H as [? ? ? ? ? H_trans | |]; subst; expand_transition H_trans
+    | ind_test_execution_transition _ _ (event _) _ _ _ _ =>
+        inversion H as [|
+          ? ? ? ? ? ? ? H_In H_trans H_trans' |
+          ? ? ? ? ? ? H_eq H_trans H_In];
+        subst; try (inversion H_eq); subst; expand_In H_In; subst;
+        expand_transition H_trans; try (expand_transition H_trans')
+    end.
+
+Ltac expand_test_execution_empty_reachability H :=
+  let H_tau := fresh "H_tau" in
+  let H_empty := fresh "H_empty" in
+    inversion H as [ | ? ? ? ? ? ? ? ? H_tau H_empty]; subst;
+    try (expand_test_execution_transition H_tau; subst;
+         expand_test_execution_empty_reachability H_empty; subst).
+
+Ltac expand_test_execution_one_step_reachability H :=
+  let H_empty := fresh "H_empty" in
+  let H_trans := fresh "H_trans" in
+    inversion H as [? ? ? ? ? ? ? ? ? H_empty H_trans]; subst;
+    expand_test_execution_empty_reachability H_empty;
+    expand_test_execution_transition H_trans;
+    clear H_empty H_trans.
+ 
+Ltac expand_test_execution_seq_reachability H :=
+  let H_empty := fresh "H_empty" in
+  let H_one_step := fresh "H_one_step" in
+  let H_seq := fresh "H_seq" in
+    lazymatch type of H with
+    | ind_test_execution_seq_reachability _ _ [ ] _ _ _ _ =>
+        inversion H as [ ? ? ? ? ? ? H_empty |]; subst;
+        expand_test_execution_empty_reachability H_empty; subst; clear H_empty
+    | ind_test_execution_seq_reachability _ _ (_ :: _) _ _ _ _ =>
+        inversion H as [| ? ? ? ? ? ? ? ? ? ? H_one_step H_seq]; subst;
+        expand_test_execution_one_step_reachability H_one_step; subst;
+        expand_test_execution_seq_reachability H_seq; subst; clear H H_one_step;
+        rename H_seq into H
+    | ind_test_execution_seq_reachability _ _ _ _ _ _ _ => idtac
+    | _ => fail "Invalid Hypothesis format"
+    end.

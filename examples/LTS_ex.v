@@ -4,10 +4,12 @@ Require Import Coq.Lists.List.
 Import Coq.Lists.List.ListNotations.
 Require Import LTS.
 Require Import LTS_functions.
+Require Import BE_syntax.
+Import BE_syntax.BehaviourExpressionsNotations.
 
 Local Open Scope string.
 
-Definition fig2_r : LTS.
+Definition fig2_r' : LTS.
 Proof.
   solve_LTS_rules
           [0;1;2;3;4;5]
@@ -15,6 +17,70 @@ Proof.
           [(0, event "but", 1);(1, event "liq", 3);
             (0, event "but", 2);(2, event "but", 4);(4, event "choc", 5)]
           0.
+Defined.
+
+Definition fig2_r_BE : BehaviourExpressions.
+Proof.
+  create_behaviour_expressions
+    ["fig2_r" ::= "but";; "liq";; STOP [] "but";; "but";; "choc";; STOP].
+Defined.
+
+Definition fig2_r : LTS.
+Proof. create_LTS_from_BE fig2_r_BE "fig2_r" 6. Defined.
+
+Definition fig2_r_SC_LTS : SC_LTS.
+Proof.
+  apply (mkSC_LTS fig2_r).
+  unfold strongly_converging. intros s t H. destruct t.
+  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
+  - unfold all_labels_tau in H. destruct H as [_ [H _]].
+    unfold not. intros H'. inversion H'; subst.
+    + proof_absurd_transition H5.
+    + proof_absurd_transition H3.
+Defined.
+
+Definition fig4_k1_LTS : LTS.
+Proof.
+   solve_LTS_rules
+          [0;1;2]
+          ["but"; "liq";"choc"]
+          [(0, event "but",1); (1, event "but", 1); (1, event "liq", 2);
+           (2, event "but",2)]
+          0.
+Defined.
+
+Definition fig4_k1_SC_LTS : SC_LTS.
+Proof.
+  apply (mkSC_LTS fig4_k1_LTS).
+  unfold strongly_converging. intros s t H. destruct t.
+  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
+  - unfold all_labels_tau in H. destruct H as [_ [H _]].
+    unfold not. intros H'. inversion H'.
+    + subst. proof_absurd_transition H5.
+    + subst. expand_transition H3.
+Defined.
+
+Definition fig4_k3_LTS : LTS.
+Proof.
+   solve_LTS_rules
+          [0;1;2;3;4;5]
+          ["but"; "liq";"choc"]
+          [(0, event "but",1);(1, event "liq",3);
+            (0, event "but",2);(2, event "but",4);(4, event "choc",5);
+            (1, event "but", 1); (3, event "but", 3); (4, event "but", 4);
+            (5, event "but", 5)]
+          0.
+Defined.
+
+Definition fig4_k3_SC_LTS : SC_LTS.
+Proof.
+  apply (mkSC_LTS fig4_k3_LTS).
+  unfold strongly_converging. intros s t H. destruct t.
+  - destruct H. unfold not in H. exfalso. apply H. reflexivity.
+  - unfold all_labels_tau in H. destruct H as [_ [H _]].
+    unfold not. intros H'. inversion H'.
+    + subst. proof_absurd_transition H5.
+    + subst. expand_transition H3.
 Defined.
 
 Definition mLTS : LTS.
@@ -29,15 +95,15 @@ Proof.
 Defined.
 
 Example test_f_init :
-  f_init 1 fig2_r = [event "liq"].
+  f_init 0 fig2_r = [event "liq"].
 Proof.
-  auto.
+  vm_compute. auto.
 Qed.
 
 Example test_f_init_LTS :
   f_init_LTS fig2_r = [ event "but"].
 Proof.
-  unfold f_init_LTS. simpl. unfold f_init. simpl. reflexivity.
+  unfold f_init_LTS. vm_compute. reflexivity.
 Qed.
 
 Example test_ind_init :
@@ -47,9 +113,9 @@ Proof.
 Qed.
 
 Example teste_ind_transition :
-  ind_transition 4 (event "choc") 5 fig2_r.
+  ind_transition 3 (event "choc") 4 fig2_r.
 Proof.
-   apply transition_r1. simpl. elem_in_list.
+   apply transition_r1. vm_compute. elem_in_list.
 Qed.
 
 Example test_ind_empty_reachability :
@@ -77,15 +143,15 @@ Qed.
 
 
 Example test_ind_traces :
-  ind_traces 0 ["but"; "but"] fig2_r.
+  ind_traces 1 ["but"; "but"] fig2_r.
 Proof.
   apply traces_r1. eapply has_reachability_to_some_other_r1.
   eapply seq_reachability_r2.
-  - apply one_step_reachability_r1 with (s1 := 0) (s2 := 2); 
-    try (apply empty_reachability_r1). apply transition_r1. simpl. elem_in_list.
+  - apply one_step_reachability_r1 with (s1 := 1) (s2 := 2); 
+    try (apply empty_reachability_r1). apply transition_r1. vm_compute. elem_in_list.
   - eapply seq_reachability_r2.
-    + apply one_step_reachability_r1 with (s1 := 2) (s2 := 4);
-      try (apply empty_reachability_r1). apply transition_r1. simpl. elem_in_list.
+    + apply one_step_reachability_r1 with (s1 := 2) (s2 := 3);
+      try (apply empty_reachability_r1). apply transition_r1. vm_compute. elem_in_list.
     + apply seq_reachability_r1. apply empty_reachability_r1.
 Qed.
 
@@ -111,10 +177,10 @@ Qed.
 Example test_ind_refuses :
   ind_refuses fig2_r.(Q) [ event "but"; event "choc"] fig2_r.
 Proof.
-  apply refuses_r1 with (s := 1).
+  apply refuses_r1 with (s := 0).
   - elem_in_list.
-  - simpl; repeat split;
-  unfold not; intros H; inversion H; proof_absurd_transition_seq H0.
+  - simpl; repeat split; unfold not; intros H; inversion H;
+    expand_transition_seq H0.
 Qed.
 
 Local Close Scope string.

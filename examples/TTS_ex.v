@@ -67,109 +67,10 @@ Proof.
    + proof_seq_reachability [(@nil nat, 4)] (@nil nat).
 Defined.
 
-
-Ltac try_all list f :=
-  lazymatch list with
-  | [ ] => idtac
-  | ?h :: ?t => f h + try_all t f
-  end.
-
-Ltac create_TTS iots pass_state fail_state theta imp_Li :=
-  apply (mkTTS iots pass_state fail_state theta); try elem_in_list; auto;
-  try (intros l s H; expand_transition H; subst; simpl; split; auto);
-  [
-    unfold ind_deterministic; intros t ls H; inversion H as [? ? H_aux]; subst;
-    clear H; rename H_aux into H;
-    inversion H as [? ? ? H_aux]; subst; clear H; rename H_aux into H;
-    simpl in H; inversion H as [? ? ? ? H_aux]; subst; clear H; rename H_aux into H;
-    intros H' H''; inversion H' as [? ? ? H_aux]; subst; simpl in H_aux;
-    clear H'; rename H_aux into H';
-    apply ind_after_reflect in H';  unfold f_after in H';
-    symmetry_eqv in H';
-    repeat (induction t as [| ? t IHt]; expand_seq_reachability H; auto;
-      simpl f_after' in H';
-      try (apply Equiv_eqLength in H'; auto; apply NoDup_cons; auto;
-           apply NoDup_nil); clear IHt)
-  |
-    intros t; destruct t; intros s H H'; [destruct H; reflexivity |];
-    simpl in H';
-      assert (H_fail:
-        forall s t,
-          ind_seq_reachability fail_state t s iots.(embedded_iolts).(sc_lts).(lts) ->
-          s = fail_state);
-      [ intros s' t' H''; induction t'; expand_seq_reachability H''; auto |];
-      assert (H_pass:
-        forall s t,
-          ind_seq_reachability pass_state t s iots.(embedded_iolts).(sc_lts).(lts) ->
-          s = pass_state);
-      [ intros s' t' H''; induction t'; expand_seq_reachability H''; auto |];
-      expand_seq_reachability H'; auto;
-      repeat (destruct t as [| ? t];
-        try (
-         inversion H' as [ ? ? ? H_empty |];
-         inversion H_empty as [ | ? ? ? ? H_trans ?];
-         subst; expand_transition H_trans; fail);
-        expand_seq_reachability H';
-        try (apply H_pass in H'; inversion H');
-        try (apply H_fail in H'; inversion H'))
-  |
-    intros q H; simpl; expand_In H; vm_compute f_init;
-    try (left; proof_Equiv); right;
-    try_all (imp_Li) ltac:(fun x => (exists x; split; auto; proof_Equiv)) ].
-
-
 Definition fig7_t1_TTS : TTS.
 Proof.
   create_TTS fig7_t1_IOTS 0 4 "theta" ["but"].
 Defined.
-
-Ltac expand_test_execution_transition H :=
-  let H_trans := fresh "H_trans" in
-  let H_trans' := fresh "H_trans'" in
-  let H_In := fresh "H_In" in
-  let H_eq := fresh "H_eq" in
-    lazymatch type of H with
-    | ind_test_execution_transition _ _ tau _ _ _ _ =>
-        inversion H as [? ? ? ? ? H_trans | |]; subst; expand_transition H_trans
-    | ind_test_execution_transition _ _ (event _) _ _ _ _ =>
-        inversion H as [|
-          ? ? ? ? ? ? ? H_In H_trans H_trans' |
-          ? ? ? ? ? ? H_eq H_trans H_In];
-        subst; try (inversion H_eq); subst; expand_In H_In; subst;
-        expand_transition H_trans; try (expand_transition H_trans')
-    end.
-
-Ltac expand_test_execution_empty_reachability H :=
-  let H_tau := fresh "H_tau" in
-  let H_empty := fresh "H_empty" in
-    inversion H as [ | ? ? ? ? ? ? ? ? H_tau H_empty]; subst;
-    try (expand_test_execution_transition H_tau; subst;
-         expand_test_execution_empty_reachability H_empty; subst).
-
-Ltac expand_test_execution_one_step_reachability H :=
-  let H_empty := fresh "H_empty" in
-  let H_trans := fresh "H_trans" in
-    inversion H as [? ? ? ? ? ? ? ? ? H_empty H_trans]; subst;
-    expand_test_execution_empty_reachability H_empty;
-    expand_test_execution_transition H_trans;
-    clear H_empty H_trans.
- 
-Ltac expand_test_execution_seq_reachability H :=
-  let H_empty := fresh "H_empty" in
-  let H_one_step := fresh "H_one_step" in
-  let H_seq := fresh "H_seq" in
-    lazymatch type of H with
-    | ind_test_execution_seq_reachability _ _ [ ] _ _ _ _ =>
-        inversion H as [ ? ? ? ? ? ? H_empty |]; subst;
-        expand_test_execution_empty_reachability H_empty; subst; clear H_empty
-    | ind_test_execution_seq_reachability _ _ (_ :: _) _ _ _ _ =>
-        inversion H as [| ? ? ? ? ? ? ? ? ? ? H_one_step H_seq]; subst;
-        expand_test_execution_one_step_reachability H_one_step; subst;
-        expand_test_execution_seq_reachability H_seq; subst; clear H H_one_step;
-        rename H_seq into H
-    | ind_test_execution_seq_reachability _ _ _ _ _ _ _ => idtac
-    | _ => fail "Invalid Hypothesis format"
-    end.
 
 Example k1_passes_t1 : ind_passes fig4_k1_IOTS fig7_t1_TTS.
 Proof.
