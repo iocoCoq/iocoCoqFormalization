@@ -60,6 +60,39 @@ Proof.
     rewrite <- app_length. apply IHx; auto.
 Qed.
 
+Section Equivb.
+  Variable A : Type.
+  Hypothesis Aeq_dec : forall (x y : A), {x = y} + {x <> y}.
+
+  Definition equivb (l1 l2 : list A) : bool :=
+    andb
+      (forallb (fun x => set_mem Aeq_dec x l2) l1)
+      (forallb (fun x => set_mem Aeq_dec x l1) l2).
+
+  Lemma equivb_Equiv : forall (l1 l2 : list A),
+    l1 [=] l2 <-> equivb l1 l2 = true.
+  Proof.
+    intros l1 l2. split.
+    - intros H. unfold Equiv in H. apply andb_true_intro. split;
+      apply forallb_forall; intros x H'; apply H in H'; apply set_mem_correct2;
+      apply H'.
+    - intros H. unfold equivb in H. apply andb_prop in H. destruct H as [H H'].
+      unfold Equiv. intros x. split; intro H'';
+      [ eapply forallb_forall in H | eapply forallb_forall in H']; try (apply H'');
+      eapply set_mem_correct1; [ apply H | apply H' ].
+Qed.
+
+End Equivb.
+
+Lemma Equiv_dec:
+  forall {A : Type} (l1 l2: list A),
+    (forall (x y : A), { x = y } + { x <> y}) ->
+    { l1 [=] l2} + {~ (l1 [=] l2) }.
+Proof.
+  intros A l1 l2 Aeq_dec. pose proof (equivb_Equiv A Aeq_dec l1 l2).
+  apply Bool.iff_reflect in H. destruct H as [H | H]; auto.
+Qed.
+
 Ltac symmetry_eqv_H H := apply Equiv_sym in H.
 Ltac symmetry_eqv_goal := apply Equiv_sym.
 
@@ -271,6 +304,20 @@ Proof.
 Qed.
 
 (* NoDup extra facts*)
+Lemma NoDup_dec :
+  forall {A : Type} (l : list A),
+  (forall a1 a2 : A, { a1 = a2 } + { a1 <> a2 }) ->
+   { NoDup l } + { ~ NoDup l }.
+Proof.
+  intros A l Aeq_dec. induction l as [| h l' H].
+  - left. apply NoDup_nil.
+  - inversion H.
+    + pose proof (in_dec Aeq_dec h l') as H'. inversion H'.
+      * right. intros H''. inversion H''. auto.
+      * left. apply NoDup_cons; auto.
+    + right. intros H'. inversion H'. auto.
+Qed.
+
 Lemma NoDup_app :
   forall {A : Type} (l1 l2 : list A),
     NoDup (l1 ++ l2) <->
@@ -413,4 +460,18 @@ Proof.
     destruct H' as [H' H'']; split; auto; apply H; apply H'. }
   apply Equiv_eqLength in H'; auto. rewrite y_eq. rewrite z_eq.
   do 2 rewrite app_length. rewrite H'. trivial.
+Qed.
+
+(* existsb extra facts *)
+Lemma existsb_false:
+  forall (A : Type) (f : A -> bool) (l : list A),
+    existsb f l = false <-> ~ exists x : A, In x l /\ f x = true.
+Proof.
+  intros. split.
+  - intros H. pose proof (existsb_exists f l) as H'. apply iff_sym in H'.
+    apply Bool.iff_reflect in H'. rewrite H in H'. inversion H'. auto.
+  - intros H. pose proof (existsb_exists f l) as H'. apply iff_sym in H'.
+    apply Bool.iff_reflect in H'. inversion H'.
+    + unfold not in H. destruct H. apply H1.
+    + reflexivity.
 Qed.
