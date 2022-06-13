@@ -274,11 +274,6 @@ Lemma ind_after_IOLTS_equiv_f_after_IOLTS:
   forall (ll : list s_label) (ls : set state) (p : s_IOLTS),
     ind_s_after_IOLTS ll ls p <-> ls [=] f_after_IOLTS ll p.
 Proof.
-  intros ll ls p. split.
-  - intros H. unfold ind_s_after_IOLTS in H. unfold ind_s_after in H.
-    unfold Equiv. intros s. split.
-    + intros H'. apply H in H'. clear H. rename H' into H. induction H.
-      * unfold f_after_IOLTS. unfold f_after_single_state_IOLTS. simpl.
 Admitted.
 
 Definition f_ioco (i : IOTS) (s : IOLTS) : Prop :=

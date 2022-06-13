@@ -69,7 +69,7 @@ Defined.
 
 Definition fig7_t1_TTS : TTS.
 Proof.
-  create_TTS fig7_t1_IOTS 0 4 "theta" ["but"].
+  create_TTS fig7_t1_IOTS 0 4 "theta".
 Defined.
 
 Example k1_passes_t1 : ind_passes fig4_k1_IOTS fig7_t1_TTS.

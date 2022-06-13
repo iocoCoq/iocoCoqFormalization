@@ -1,5 +1,6 @@
 Require Import LTS.
 Require Import IOTS.
+Require Import TTS.
 Require Import BE_trans_set_creator.
 Require Import BE_syntax.
 Require Import Coq.Lists.ListSet.
@@ -122,4 +123,27 @@ Definition generate_dot_s_IOLTS (s_iolts : s_IOLTS) : string :=
       (iolts_transition_label_to_str s_iolts.(iolts).(L_i)))
   ++ generate_dot (map (fun x => (x, "δ", x)) s_iolts.(Ts)) nat_to_str id
   ++ " }".
+
+Definition tts_transition_label_to_str (theta : label) (imp_Li : set label)
+    (l : transition_label) : string :=
+  match l with
+  | event e =>
+      if string_dec e theta
+      then "θ"
+      else
+        if set_mem string_dec e imp_Li
+        then "?" ++ e
+        else "!" ++ e
+  | tau => "τ"
+  end.
+
+Definition generate_dot_TTS (tts : TTS) : string :=
+  "digraph TTS { "
+  ++ style_initial_state tts.(iots).(embedded_iolts).(sc_lts).(lts).(q0) nat_to_str
+  ++ "<" ++ nat_to_str tts.(pass_state) ++ "> [style=bold, label=pass];"
+  ++ "<" ++ nat_to_str tts.(fail_state) ++ "> [style=bold, label=fail];"
+  ++ (generate_dot tts.(iots).(embedded_iolts).(sc_lts).(lts).(T) nat_to_str
+      (tts_transition_label_to_str tts.(theta) (tts).(imp_Li)))
+  ++ " }".
+
 Local Close Scope string_scope.

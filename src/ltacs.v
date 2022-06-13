@@ -339,7 +339,7 @@ Ltac transation_set_complete H f :=
   end || fail 0 "Transation set has missing transations".
 
 Ltac try_all l f :=
-  match l with
+  match eval compute in l with
   | nil => fail 0
   | ?b :: ?tl => f b || try_all tl f
   end.
@@ -408,7 +408,7 @@ Ltac behaviour_trans_set_valid :=
   | ?h :: ?t => f h + try_all t f
   end. *)
 
-Ltac create_TTS iots pass_state fail_state theta imp_Li :=
+Ltac create_TTS iots pass_state fail_state theta :=
   let H := fresh "H" in
   let H' := fresh "H'" in
   let H'' := fresh "H''" in
@@ -458,7 +458,9 @@ Ltac create_TTS iots pass_state fail_state theta imp_Li :=
     |
       intros q H; simpl; expand_In H; vm_compute f_init;
       try (left; proof_Equiv); right;
-      try_all (imp_Li) ltac:(fun x => (exists x; split; auto; proof_Equiv)) ].
+      try_all
+        (iots.(embedded_iolts).(L_u))
+        ltac:(fun x => (exists x; split; auto; proof_Equiv)) ].
 
 Ltac expand_test_execution_transition H :=
   let H_trans := fresh "H_trans" in
